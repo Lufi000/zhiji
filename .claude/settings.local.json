@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodebuild:*)",
+      "Bash(swiftc:*)",
+      "Bash(chmod:*)",
+      "Bash(swift:*)",
+      "Bash(sips -g all:*)",
+      "Bash(sips:*)",
+      "Bash(convert:*)",
+      "Bash(python3:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(xargs:*)",
+      "Bash(find:*)",
+      "Bash(xcrun simctl:*)",
+      "Bash(/usr/bin/xcrun simctl list devices available:*)",
+      "Bash(xcode-select:*)",
+      "Bash(sudo xcode-select:*)"
+    ]
+  }
+}

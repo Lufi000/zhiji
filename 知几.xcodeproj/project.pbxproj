@@ -6,43 +6,48 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		9CC863C82F21CB260074B872 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9CC863C72F21CB260074B872 /* StoreKit.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		9CCBF3612F1DF59900365CC1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 9CCBF34B2F1DF59800365CC1 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 9CCBF3522F1DF59800365CC1;
-			remoteInfo = "人生气象台";
+			remoteInfo = "知几";
 		};
 		9CCBF36B2F1DF59900365CC1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 9CCBF34B2F1DF59800365CC1 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 9CCBF3522F1DF59800365CC1;
-			remoteInfo = "人生气象台";
+			remoteInfo = "知几";
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		9CCBF3532F1DF59800365CC1 /* 人生气象台.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "人生气象台.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		9CCBF3602F1DF59900365CC1 /* 人生气象台Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "人生气象台Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		9CCBF36A2F1DF59900365CC1 /* 人生气象台UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "人生气象台UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9CC863C72F21CB260074B872 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		9CCBF3532F1DF59800365CC1 /* 知几.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "知几.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9CCBF3602F1DF59900365CC1 /* 知几Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "知几Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9CCBF36A2F1DF59900365CC1 /* 知几UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "知几UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		9CCBF3552F1DF59800365CC1 /* 人生气象台 */ = {
+		9CCBF3552F1DF59800365CC1 /* 知几 */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "人生气象台";
+			path = "知几";
 			sourceTree = "<group>";
 		};
-		9CCBF3632F1DF59900365CC1 /* 人生气象台Tests */ = {
+		9CCBF3632F1DF59900365CC1 /* 知几Tests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "人生气象台Tests";
+			path = "知几Tests";
 			sourceTree = "<group>";
 		};
-		9CCBF36D2F1DF59900365CC1 /* 人生气象台UITests */ = {
+		9CCBF36D2F1DF59900365CC1 /* 知几UITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "人生气象台UITests";
+			path = "知几UITests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9CC863C82F21CB260074B872 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,12 +78,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9CC863C62F21CB260074B872 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9CC863C72F21CB260074B872 /* StoreKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		9CCBF34A2F1DF59800365CC1 = {
 			isa = PBXGroup;
 			children = (
-				9CCBF3552F1DF59800365CC1 /* 人生气象台 */,
-				9CCBF3632F1DF59900365CC1 /* 人生气象台Tests */,
-				9CCBF36D2F1DF59900365CC1 /* 人生气象台UITests */,
+				9CCBF3552F1DF59800365CC1 /* 知几 */,
+				9CCBF3632F1DF59900365CC1 /* 知几Tests */,
+				9CCBF36D2F1DF59900365CC1 /* 知几UITests */,
+				9CC863C62F21CB260074B872 /* Frameworks */,
 				9CCBF3542F1DF59800365CC1 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +100,9 @@
 		9CCBF3542F1DF59800365CC1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				9CCBF3532F1DF59800365CC1 /* 人生气象台.app */,
-				9CCBF3602F1DF59900365CC1 /* 人生气象台Tests.xctest */,
-				9CCBF36A2F1DF59900365CC1 /* 人生气象台UITests.xctest */,
+				9CCBF3532F1DF59800365CC1 /* 知几.app */,
+				9CCBF3602F1DF59900365CC1 /* 知几Tests.xctest */,
+				9CCBF36A2F1DF59900365CC1 /* 知几UITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +110,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		9CCBF3522F1DF59800365CC1 /* 人生气象台 */ = {
+		9CCBF3522F1DF59800365CC1 /* 知几 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 9CCBF3742F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "人生气象台" */;
+			buildConfigurationList = 9CCBF3742F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "知几" */;
 			buildPhases = (
 				9CCBF34F2F1DF59800365CC1 /* Sources */,
 				9CCBF3502F1DF59800365CC1 /* Frameworks */,
@@ -108,18 +123,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				9CCBF3552F1DF59800365CC1 /* 人生气象台 */,
+				9CCBF3552F1DF59800365CC1 /* 知几 */,
 			);
-			name = "人生气象台";
+			name = "知几";
 			packageProductDependencies = (
 			);
-			productName = "人生气象台";
-			productReference = 9CCBF3532F1DF59800365CC1 /* 人生气象台.app */;
+			productName = "知几";
+			productReference = 9CCBF3532F1DF59800365CC1 /* 知几.app */;
 			productType = "com.apple.product-type.application";
 		};
-		9CCBF35F2F1DF59900365CC1 /* 人生气象台Tests */ = {
+		9CCBF35F2F1DF59900365CC1 /* 知几Tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 9CCBF3772F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "人生气象台Tests" */;
+			buildConfigurationList = 9CCBF3772F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "知几Tests" */;
 			buildPhases = (
 				9CCBF35C2F1DF59900365CC1 /* Sources */,
 				9CCBF35D2F1DF59900365CC1 /* Frameworks */,
@@ -131,18 +146,18 @@
 				9CCBF3622F1DF59900365CC1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				9CCBF3632F1DF59900365CC1 /* 人生气象台Tests */,
+				9CCBF3632F1DF59900365CC1 /* 知几Tests */,
 			);
-			name = "人生气象台Tests";
+			name = "知几Tests";
 			packageProductDependencies = (
 			);
-			productName = "人生气象台Tests";
-			productReference = 9CCBF3602F1DF59900365CC1 /* 人生气象台Tests.xctest */;
+			productName = "知几Tests";
+			productReference = 9CCBF3602F1DF59900365CC1 /* 知几Tests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		9CCBF3692F1DF59900365CC1 /* 人生气象台UITests */ = {
+		9CCBF3692F1DF59900365CC1 /* 知几UITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 9CCBF37A2F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "人生气象台UITests" */;
+			buildConfigurationList = 9CCBF37A2F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "知几UITests" */;
 			buildPhases = (
 				9CCBF3662F1DF59900365CC1 /* Sources */,
 				9CCBF3672F1DF59900365CC1 /* Frameworks */,
@@ -154,13 +169,13 @@
 				9CCBF36C2F1DF59900365CC1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				9CCBF36D2F1DF59900365CC1 /* 人生气象台UITests */,
+				9CCBF36D2F1DF59900365CC1 /* 知几UITests */,
 			);
-			name = "人生气象台UITests";
+			name = "知几UITests";
 			packageProductDependencies = (
 			);
-			productName = "人生气象台UITests";
-			productReference = 9CCBF36A2F1DF59900365CC1 /* 人生气象台UITests.xctest */;
+			productName = "知几UITests";
+			productReference = 9CCBF36A2F1DF59900365CC1 /* 知几UITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +201,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 9CCBF34E2F1DF59800365CC1 /* Build configuration list for PBXProject "人生气象台" */;
+			buildConfigurationList = 9CCBF34E2F1DF59800365CC1 /* Build configuration list for PBXProject "知几" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -200,9 +215,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				9CCBF3522F1DF59800365CC1 /* 人生气象台 */,
-				9CCBF35F2F1DF59900365CC1 /* 人生气象台Tests */,
-				9CCBF3692F1DF59900365CC1 /* 人生气象台UITests */,
+				9CCBF3522F1DF59800365CC1 /* 知几 */,
+				9CCBF35F2F1DF59900365CC1 /* 知几Tests */,
+				9CCBF3692F1DF59900365CC1 /* 知几UITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +273,12 @@
 /* Begin PBXTargetDependency section */
 		9CCBF3622F1DF59900365CC1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 9CCBF3522F1DF59800365CC1 /* 人生气象台 */;
+			target = 9CCBF3522F1DF59800365CC1 /* 知几 */;
 			targetProxy = 9CCBF3612F1DF59900365CC1 /* PBXContainerItemProxy */;
 		};
 		9CCBF36C2F1DF59900365CC1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 9CCBF3522F1DF59800365CC1 /* 人生气象台 */;
+			target = 9CCBF3522F1DF59800365CC1 /* 知几 */;
 			targetProxy = 9CCBF36B2F1DF59900365CC1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -400,6 +415,7 @@
 				DEVELOPMENT_TEAM = 3488U99HV8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "知几";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -410,7 +426,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lufi.-----";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lufi.zhiji;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -432,6 +448,7 @@
 				DEVELOPMENT_TEAM = 3488U99HV8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "知几";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -442,7 +459,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.lufi.-----";
+				PRODUCT_BUNDLE_IDENTIFIER = com.lufi.zhiji;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -472,7 +489,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/人生气象台.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/人生气象台";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/知几.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/知几";
 			};
 			name = Debug;
 		};
@@ -494,7 +511,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/人生气象台.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/人生气象台";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/知几.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/知几";
 			};
 			name = Release;
 		};
@@ -514,7 +531,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "人生气象台";
+				TEST_TARGET_NAME = "知几";
 			};
 			name = Debug;
 		};
@@ -534,14 +551,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = "人生气象台";
+				TEST_TARGET_NAME = "知几";
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		9CCBF34E2F1DF59800365CC1 /* Build configuration list for PBXProject "人生气象台" */ = {
+		9CCBF34E2F1DF59800365CC1 /* Build configuration list for PBXProject "知几" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9CCBF3722F1DF59900365CC1 /* Debug */,
@@ -550,7 +567,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		9CCBF3742F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "人生气象台" */ = {
+		9CCBF3742F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "知几" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9CCBF3752F1DF59900365CC1 /* Debug */,
@@ -559,7 +576,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		9CCBF3772F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "人生气象台Tests" */ = {
+		9CCBF3772F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "知几Tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9CCBF3782F1DF59900365CC1 /* Debug */,
@@ -568,7 +585,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		9CCBF37A2F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "人生气象台UITests" */ = {
+		9CCBF37A2F1DF59900365CC1 /* Build configuration list for PBXNativeTarget "知几UITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				9CCBF37B2F1DF59900365CC1 /* Debug */,

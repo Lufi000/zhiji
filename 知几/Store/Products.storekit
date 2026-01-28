@@ -1,0 +1,40 @@
+{
+  "identifier" : "com.lufi.zhiji.products",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "12",
+      "familyShareable" : false,
+      "internalID" : "liunan_analysis_001",
+      "localizations" : [
+        {
+          "description" : "解锁此命盘的流年解析功能",
+          "displayName" : "流年解析",
+          "locale" : "zh_CN"
+        },
+        {
+          "description" : "Unlock Liu Nian analysis for this chart",
+          "displayName" : "Liu Nian Analysis",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.lufi.zhiji.liunian_analysis",
+      "referenceName" : "流年解析",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "zhiji_app",
+    "_developerTeamID" : "3488U99HV8",
+    "_lastSynchronizedDate" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
