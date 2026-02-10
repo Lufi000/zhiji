@@ -285,8 +285,8 @@ enum PillarCalculator {
 
         let zhiIndex = getMonthZhiByJieqi(year: year, month: month, day: day)
 
-        // 月天干：五虎遁月诀
-        let yinGanMap = [2, 4, 6, 8, 0]
+        // 月天干：五虎遁月诀（甲己丙作首、乙庚戊为头、丙辛寻庚上、丁壬壬位、戊癸壬寅）
+        let yinGanMap = [2, 4, 6, 8, 8]  // 甲0己5→丙2, 乙1庚6→戊4, 丙2辛7→庚6, 丁3壬8→壬8, 戊4癸9→壬8
         let yinGan = yinGanMap[actualYearGanIndex % 5]
 
         let offset = (zhiIndex - 2 + 12) % 12
@@ -304,7 +304,7 @@ enum PillarCalculator {
         let calendar = Calendar.current
         guard let baseDate = calendar.date(from: DateComponents(year: 2000, month: 1, day: 1)),
               let targetDate = calendar.date(from: DateComponents(year: year, month: month, day: day)) else {
-            // 回退到默认值（理论上不应该发生）
+            BaziLogger.shared.warning("日期无效无法计算日柱: \(year)年\(month)月\(day)日，回退为甲子")
             return Pillar(gan: "甲", zhi: "子")
         }
 
@@ -483,7 +483,10 @@ func calculateQiYunAge(birthYear: Int, birthMonth: Int, birthDay: Int, gender: S
     guard let birthDate = calendar.date(from: birthComponents),
           let targetDate = calendar.date(from: targetComponents) else { return defaultAge }
 
-    let daysDiff = abs(calendar.dateComponents([.day], from: birthDate, to: targetDate).day ?? 0)
+    // 使用当日 0 点再算天数差，避免时辰影响；取绝对值（顺推/逆推都可能 target 在 birth 前）
+    let birthStart = calendar.startOfDay(for: birthDate)
+    let targetStart = calendar.startOfDay(for: targetDate)
+    let daysDiff = abs(calendar.dateComponents([.day], from: birthStart, to: targetStart).day ?? 0)
 
     // 三天折一年
     let daysPerYear = 3
@@ -536,4 +539,15 @@ func getZhiShiShen(riGan: String, zhi: String) -> String {
         return "未知"
     }
     return getShiShen(riGan: riGan, targetGan: cangGanList[0])
+}
+
+// MARK: - 流年干支
+
+/// 获取指定公历年份的流年干支（与年柱基准一致：1984 甲子年）
+/// - Parameter year: 公历年份
+/// - Returns: (天干, 地支)
+func getLiuNianGanZhi(year: Int) -> (gan: String, zhi: String) {
+    let g = (year - 1984) % 10
+    let z = (year - 1984) % 12
+    return (BaziConstants.tianGan[(g + 10) % 10], BaziConstants.diZhi[(z + 12) % 12])
 }

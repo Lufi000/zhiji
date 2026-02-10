@@ -1,124 +1,59 @@
 import SwiftUI
 
-// MARK: - 滚动位置偏好键
-
-struct SectionOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: [MingPanSection: CGFloat] = [:]
-    
-    static func reduce(value: inout [MingPanSection: CGFloat], nextValue: () -> [MingPanSection: CGFloat]) {
-        value.merge(nextValue()) { $1 }
-    }
-}
-
-// MARK: - 命盘区块枚举
-
-enum MingPanSection: String, CaseIterable {
-    case core = "核心解读"
-    case guide = "生活指南"
-    case detail = "专业详解"
-    
-    var icon: String {
-        switch self {
-        case .core: return "sparkles"
-        case .guide: return "compass.drawing"
-        case .detail: return "chart.bar.doc.horizontal"
-        }
-    }
-    
-    var subtitle: String {
-        switch self {
-        case .core: return "一眼看懂你是谁、适合什么"
-        case .guide: return "把命理转化为实用建议"
-        case .detail: return "深入了解命盘的底层逻辑"
-        }
-    }
-    
-    var scrollId: String {
-        switch self {
-        case .core: return "section_core"
-        case .guide: return "section_guide"
-        case .detail: return "section_detail"
-        }
-    }
-}
-
 // MARK: - 命盘视图
 
 struct MingPanView: View {
     @Bindable var viewModel: ResultViewModel
     let onBack: () -> Void
+
+    /// 当前选中大运步数（用于下方全宽显示流年）；nil 表示不显示流年
+    @State private var selectedDaYunIndex: Int? = nil
+    /// 当前选中流年（公历年份）；仅当属于当前选中大运的十年内时有效
+    @State private var selectedLiuNianYear: Int? = nil
+    /// 是否已初始化默认选中
+    @State private var hasInitializedSelection = false
     
-    // MARK: - 导航状态
-    @State private var activeSection: MingPanSection = .core
-    @State private var isDetailExpanded: Bool = true
-    @State private var isScrollingByTap: Bool = false  // 防止点击跳转时滚动联动干扰
-    @State private var scrollProxy: ScrollViewProxy?   // 保存 proxy 引用
+    /// 能量互动折叠状态（默认收起）
+    @State private var isEnergyExpanded = false
+    /// 大运流年互动折叠状态（默认收起）
+    @State private var isDaYunEnergyExpanded = false
 
     var body: some View {
-        ScrollViewReader { proxy in
+        ScrollViewReader { _ in
             ZStack(alignment: .top) {
                 // 内容区域（可滚动到 tab 下方）
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 24) {
-                        // 顶部占位，为 header + tab 留出初始空间
-                        Color.clear.frame(height: 100)
+                    VStack(spacing: 16) {
+                        // 顶部占位，为 header 留出空间
+                        Color.clear.frame(height: 60)
                         
-                        // MARK: - 第一层：核心解读
-                        VStack(spacing: 16) {
-                            sectionHeader(for: .core)
-                            dayMasterCard
-                            
-                            // 四柱
-                            fourPillarsCard
-                            
-                            LifeThemesView(bazi: viewModel.bazi, gender: viewModel.gender)
-                        }
-                        .id("section_core")
-                        
-                        // MARK: - 第二层：生活指南
-                        VStack(spacing: 16) {
-                            sectionHeader(for: .guide)
-                            yongShenCard
-                            healthCard
-                            luckyNumberCard
-                            homeEnvironmentCard
-                        }
-                        .id("section_guide")
-                        
-                        // MARK: - 第三层：专业详解（可折叠）
-                        VStack(spacing: 16) {
-                            detailSectionHeader
-                            
-                            if isDetailExpanded {
-                                // 五行能量
-                                WuXingEnergyView(bazi: viewModel.bazi)
-                                
-                                // 十神分布
-                                ShiShenView(bazi: viewModel.bazi)
-                            }
-                        }
-                        .id("section_detail")
+                        dayMasterCard
+                        fourPillarsCard
+
+                        // MARK: - 大运与流年
+                        daYunLiuNianSection
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 24)
                     .padding(.bottom, 100)
                 }
-                .onPreferenceChange(SectionOffsetPreferenceKey.self) { offsets in
-                    updateActiveSection(from: offsets)
+                .onAppear {
+                    guard !hasInitializedSelection else { return }
+                    hasInitializedSelection = true
+                    // 默认选中当前大运
+                    selectedDaYunIndex = viewModel.currentDaYunStepIndex
+                    // 默认选中当前流年
+                    let currentYear = Calendar.current.component(.year, from: Date())
+                    let yearsInCurrentDaYun = viewModel.yearsForDaYunStep(viewModel.currentDaYunStepIndex)
+                    if yearsInCurrentDaYun.contains(currentYear) {
+                        selectedLiuNianYear = currentYear
+                    }
                 }
                 
-                // 顶部整体区域（状态栏 + headerBar + tab 统一背景）
-                VStack(spacing: 0) {
-                    // 顶部导航栏
-                    headerBar
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
-                        .padding(.bottom, 8)
-                    
-                    // tab 导航
-                    sectionNavigator(proxy: proxy)
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 8)
-                }
+                // 顶部整体区域（状态栏 + headerBar）
+                headerBar
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+                    .padding(.bottom, 8)
                 .frame(maxWidth: .infinity)
                 .background(
                     ZStack {
@@ -143,39 +78,6 @@ struct MingPanView: View {
                     .ignoresSafeArea(edges: .top)
                 )
             }
-            .onAppear {
-                scrollProxy = proxy
-            }
-        }
-    }
-    
-    // MARK: - 更新当前活跃区块
-    
-    private func updateActiveSection(from offsets: [MingPanSection: CGFloat]) {
-        // 如果是点击触发的滚动，不更新
-        guard !isScrollingByTap else { return }
-        
-        // 使用全局坐标
-        // 当标题滚动到导航栏底部附近时（约 y=160），切换 tab
-        // 选择已滚动到阈值以上、且 y 值最大的标题（即刚滚过去的）
-        let threshold: CGFloat = 160
-        
-        var newSection: MingPanSection = .core
-        var maxOffset: CGFloat = -.infinity
-        
-        for section in MingPanSection.allCases {
-            if let offset = offsets[section] {
-                if offset <= threshold && offset > maxOffset {
-                    maxOffset = offset
-                    newSection = section
-                }
-            }
-        }
-        
-        if activeSection != newSection {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                activeSection = newSection
-            }
         }
     }
     
@@ -195,802 +97,409 @@ struct MingPanView: View {
 
             Spacer()
 
-            AppLogo(size: 32)
-        }
-    }
-    
-    // MARK: - 导航栏（与底部tab一致的设计语言）
-    
-    private func sectionNavigator(proxy: ScrollViewProxy) -> some View {
-        HStack(spacing: 4) {
-            ForEach(MingPanSection.allCases, id: \.self) { section in
-                sectionTabButton(for: section, proxy: proxy)
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 6)
-        .background(.ultraThinMaterial)
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.6), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.06), radius: 16, x: 0, y: 4)
-    }
-    
-    private func sectionTabButton(for section: MingPanSection, proxy: ScrollViewProxy) -> some View {
-        let isSelected = activeSection == section
-        
-        return Button(action: {
-            // 标记为点击触发的滚动，防止滚动联动干扰
-            isScrollingByTap = true
-            
-            // 如果是专业详解且未展开，先展开
-            if section == .detail && !isDetailExpanded {
-                isDetailExpanded = true
-            }
-            
-            // 更新选中状态
-            withAnimation(.easeInOut(duration: 0.2)) {
-                activeSection = section
-            }
-            
-            // 延迟执行滚动，确保展开动画完成
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    proxy.scrollTo(section.scrollId, anchor: .top)
+            // Logo + 复制命盘按钮（毛玻璃质感）
+            Button(action: { viewModel.copyMingPanForDeepSeek() }) {
+                HStack(spacing: 6) {
+                    AppLogo(size: 24)
+                    Text("复制到 AI")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(DesignSystem.textSecondary)
                 }
-                
-                // 滚动完成后恢复滚动联动
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isScrollingByTap = false
-                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
+                )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(Color.white.opacity(0.5), lineWidth: 0.5)
+                )
             }
-        }) {
-            HStack(spacing: 4) {
-                Image(systemName: section.icon)
-                    .font(.system(size: 12, weight: isSelected ? .medium : .light))
-                
-                Text(section.rawValue)
-                    .font(.system(size: 11, weight: isSelected ? .medium : .light))
-            }
-            .foregroundColor(isSelected ? DesignSystem.textPrimary : DesignSystem.textTertiary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                Capsule()
-                    .fill(isSelected ? Color.gray.opacity(0.15) : Color.clear)
-            )
+            .buttonStyle(.plain)
         }
     }
     
-    // MARK: - 区块标题（带位置检测）
-    
-    private func sectionHeader(for section: MingPanSection) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: section.icon)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(DesignSystem.primaryOrange)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(section.rawValue)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(DesignSystem.textPrimary)
-                
-                Text(section.subtitle)
-                    .font(.system(size: 11, weight: .light))
-                    .foregroundColor(DesignSystem.textTertiary)
-            }
-            
-            Spacer()
-        }
-        .padding(.vertical, 4)
-        .overlay(alignment: .top) {
-            GeometryReader { geometry in
-                Color.clear
-                    .preference(
-                        key: SectionOffsetPreferenceKey.self,
-                        value: [section: geometry.frame(in: .global).minY]
-                    )
-            }
-            .frame(height: 1)
-        }
-    }
-    
-    // MARK: - 专业详解标题（带折叠按钮和位置检测）
-    
-    private var detailSectionHeader: some View {
-        Button(action: {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                isDetailExpanded.toggle()
-            }
-        }) {
-            HStack(spacing: 8) {
-                Image(systemName: MingPanSection.detail.icon)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(DesignSystem.primaryOrange)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(MingPanSection.detail.rawValue)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(DesignSystem.textPrimary)
-                    
-                    Text(MingPanSection.detail.subtitle)
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundColor(DesignSystem.textTertiary)
-                }
-                
-                Spacer()
-                
-                // 折叠指示器
-                HStack(spacing: 4) {
-                    Text(isDetailExpanded ? "收起" : "展开")
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundColor(DesignSystem.textTertiary)
-                    
-                    Image(systemName: isDetailExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(DesignSystem.textTertiary)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.gray.opacity(0.08))
-                .clipShape(Capsule())
-            }
-            .padding(.vertical, 4)
-        }
-        .buttonStyle(.plain)
-        .overlay(alignment: .top) {
-            GeometryReader { geometry in
-                Color.clear
-                    .preference(
-                        key: SectionOffsetPreferenceKey.self,
-                        value: [.detail: geometry.frame(in: .global).minY]
-                    )
-            }
-            .frame(height: 1)
-        }
-    }
-
-    // MARK: - 四柱卡片
+    // MARK: - 四柱卡片（含能量互动折叠）
     
     private var fourPillarsCard: some View {
         GlassCard {
-            HStack(spacing: 0) {
-                ForEach(Array(zip(["年", "月", "日", "时"], [viewModel.bazi.year, viewModel.bazi.month, viewModel.bazi.day, viewModel.bazi.hour]).enumerated()), id: \.0) { i, item in
-                    PillarView(
-                        title: item.0,
-                        gan: item.1.gan,
-                        zhi: item.1.zhi,
-                        shiShen: viewModel.getGanShiShen(position: item.0, gan: item.1.gan),
-                        zhiShiShen: viewModel.getZhiShiShenDisplay(item.1.zhi),
-                        isDay: i == 2,
-                        riGan: viewModel.bazi.day.gan,
-                        onTapExplanation: { explanationType in
-                            viewModel.selectedExplanationType = explanationType
+            VStack(spacing: 0) {
+                // 四柱主体
+                HStack(spacing: 0) {
+                    ForEach(Array(zip(["年", "月", "日", "时"], [viewModel.bazi.year, viewModel.bazi.month, viewModel.bazi.day, viewModel.bazi.hour]).enumerated()), id: \.0) { i, item in
+                        PillarView(
+                            title: item.0,
+                            gan: item.1.gan,
+                            zhi: item.1.zhi,
+                            shiShen: viewModel.getGanShiShen(position: item.0, gan: item.1.gan),
+                            zhiShiShen: viewModel.getZhiShiShenDisplay(item.1.zhi),
+                            isDay: i == 2,
+                            riGan: viewModel.bazi.day.gan
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .padding(.vertical, 24)
+                .padding(.horizontal, 24)
+                
+                // 展开/收起按钮
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isEnergyExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        if isEnergyExpanded {
+                            Text("能量互动")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(DesignSystem.textTertiary)
                         }
-                    )
+                        Image(systemName: isEnergyExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(DesignSystem.textTertiary)
+                    }
                     .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                
+                // 展开内容：能量互动
+                if isEnergyExpanded {
+                    Divider()
+                        .padding(.horizontal, 24)
+                    
+                    EmbeddedWuXingEnergyView(bazi: viewModel.bazi)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 24)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
-            .padding(.vertical, 24)
-            .padding(.horizontal, 16)
         }
     }
 
-    // MARK: - 日主卡片
+    // MARK: - 日主卡片（Risograph 艺术风格）
 
     private var dayMasterCard: some View {
         let dayGan = viewModel.bazi.day.gan
         let dayWx = BaziConstants.wuXing[dayGan] ?? "木"
         let colors = WuXingColor.colors(for: dayWx)
         let ganExplanation = BaziExplanations.getGanExplanation(dayGan)
+        
+        // 柔和的底色（基于五行色的极浅版本）
+        let backgroundColor = colors.secondary.opacity(0.12)
 
-        return VStack(spacing: 12) {
-            // 生日日期时间
-            HStack {
-                Text("\(viewModel.birth.year)年\(viewModel.birth.month)月\(viewModel.birth.day)日 \(viewModel.birth.hour)时")
-                    .font(.system(size: 12, weight: .light))
-                    .foregroundColor(.white.opacity(0.7))
-                Spacer()
-
-                Button(action: { viewModel.copyFullBaziInfo() }) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-            }
-
-            HStack(spacing: 8) {
-                Text("日主")
-                    .font(.system(size: 13, weight: .light))
-                    .foregroundColor(.white.opacity(0.8))
-
-                HStack(spacing: 4) {
-                    Text(dayGan)
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(.white)
-                    Text(dayWx)
-                        .font(.system(size: 22, weight: .light))
-                        .foregroundColor(.white.opacity(0.9))
-                }
-
-                Text("·")
-                    .foregroundColor(.white.opacity(0.6))
-
-                // 身强身弱标签
-                Button(action: {
-                    viewModel.toggleStrengthPicker()
-                }) {
-                    HStack(spacing: 4) {
-                        Text(viewModel.effectiveStrength)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white)
-
-                        if viewModel.customStrength == nil {
-                            Text("(\(viewModel.strengthResult.score))")
-                                .font(.system(size: 12, weight: .light))
-                                .foregroundColor(.white.opacity(0.7))
-                        } else {
-                            Text("(自定义)")
-                                .font(.system(size: 12, weight: .light))
-                                .foregroundColor(.white.opacity(0.7))
-                        }
-
-                        Image(systemName: viewModel.showStrengthPicker ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.white.opacity(0.15))
+        return GlassCard(tintColor: colors.primary) {
+            // 艺术图形区域
+            ZStack(alignment: .top) {
+                // 底层：信息条背景（带渐变过渡到透明）
+                ZStack {
+                    // 渐变背景：从五行色到透明（从波浪处开始）
+                    LinearGradient(
+                        stops: [
+                            .init(color: colors.secondary.opacity(0.06), location: 0),
+                            .init(color: colors.secondary.opacity(0.06), location: 0.8),
+                            .init(color: .clear, location: 1.0)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                }
-
-                // 科普按钮
-                Button(action: {
-                    viewModel.selectedExplanationType = .strength(viewModel.effectiveStrength)
-                }) {
-                    Image(systemName: "info.circle")
-                        .font(.system(size: 14, weight: .light))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-
-                Spacer()
-            }
-
-            // 人话描述：你是什么样的人
-            if let explanation = ganExplanation {
-                VStack(alignment: .leading, spacing: 8) {
-                    // 简短比喻
-                    Text(getDayMasterMetaphor(dayGan))
-                        .font(.system(size: 13, weight: .light))
-                        .foregroundColor(.white.opacity(0.9))
-
-                    // 核心关键词
-                    HStack(spacing: 6) {
-                        ForEach(explanation.keywords.prefix(4), id: \.self) { keyword in
-                            Text(keyword)
-                                .font(.system(size: 11, weight: .light))
-                                .foregroundColor(.white.opacity(0.85))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.white.opacity(0.15))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
-            }
-
-            // 身强身弱选择器（包含计算详情）
-            if viewModel.showStrengthPicker {
-                strengthPickerView
-            }
-        }
-        .padding(.vertical, 16)
-        .padding(.horizontal, 20)
-        .background(
-            LinearGradient(
-                colors: [colors.secondary, colors.primary.opacity(0.8)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusLarge))
-        .shadow(color: colors.secondary.opacity(0.3), radius: 16, x: 0, y: 8)
-    }
-
-    private var strengthPickerView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Divider()
-                .background(Color.white.opacity(0.3))
-
-            HStack(spacing: 6) {
-                ForEach(ResultViewModel.strengthOptions, id: \.self) { option in
-                    let isSystemValue = option == viewModel.strengthResult.strength
-                    Button(action: {
-                        viewModel.selectStrength(option)
-                    }) {
-                        VStack(spacing: 2) {
-                            Text(option)
-                                .font(.system(size: 11, weight: viewModel.effectiveStrength == option ? .medium : .light))
-                                .foregroundColor(viewModel.effectiveStrength == option ? .white : .white.opacity(0.6))
-
-                            if isSystemValue {
-                                Text("推荐")
-                                    .font(.system(size: 8, weight: .light))
-                                    .foregroundColor(.white.opacity(0.5))
-                            }
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, isSystemValue ? 4 : 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(viewModel.effectiveStrength == option ? Color.white.opacity(0.25) : Color.white.opacity(0.1))
+                    
+                    // 信息条背景肌理
+                    BackgroundTexture()
+                        .opacity(0.5)
+                        .mask(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .white, location: 0),
+                                    .init(color: .white, location: 0.8),
+                                    .init(color: .clear, location: 1.0)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
                         )
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                
+                // 上层：图形区域（波浪底部形状）
+                ZStack {
+                    // 图形区域底色
+                    backgroundColor
+                    
+                    // 背景肌理
+                    BackgroundTexture()
+                        .opacity(0.6)
+                    
+                    // 左侧竖排简短描述 + 中间有机图形
+                    ZStack {
+                        // 中间：有机几何图形（居中）
+                        DayMasterShape(tianGan: dayGan, size: 110)
+                        
+                        // 左侧：竖排简短描述
+                        if let explanation = ganExplanation, !explanation.shortMetaphor.isEmpty {
+                            HStack {
+                                VerticalText(text: explanation.shortMetaphor, color: colors.primary)
+                                    .padding(.leading, 16)
+                                Spacer()
+                            }
+                        }
                     }
                 }
-            }
-
-            // 计算详情
-            VStack(alignment: .leading, spacing: 6) {
-                Divider()
-                    .background(Color.white.opacity(0.2))
-                    .padding(.top, 4)
-
-                Text("计算详情：")
-                    .font(.system(size: 12, weight: .light))
-                    .foregroundColor(.white.opacity(0.8))
-
-                Text(viewModel.strengthResult.details)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.8))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                // 极强/极弱时显示从格提示
-                if viewModel.strengthResult.strength == "极强" || viewModel.strengthResult.strength == "极弱" {
-                    Text("此命局可能为从格，如需精确判断建议结合人工分析")
-                        .font(.system(size: 11, weight: .light))
-                        .foregroundColor(.white.opacity(0.7))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            .padding(.top, 4)
-        }
-    }
-
-    // MARK: - 喜忌卡片
-
-    private var yongShenCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                // 标题行：喜忌 + 调候（如有）
+                .frame(maxWidth: .infinity)
+                .frame(height: 150)
+                .clipShape(WaveBottomShape(waveHeight: 16))
+                
+                // 文字信息条
                 HStack(alignment: .center) {
-                    Text("喜忌")
-                        .font(.system(size: 15, weight: .light))
+                    // 左侧：出生日期
+                    Text(verbatim: "\(viewModel.birth.year)年\(viewModel.birth.month)月\(viewModel.birth.day)日 \(viewModel.birth.hour)时\(viewModel.birth.minute)分")
+                        .font(.system(size: 12, weight: .light))
+                        .foregroundColor(colors.secondary.opacity(0.8))
+                    
+                    Spacer()
+                    
+                    // 右侧：日主五行
+                    HStack(spacing: 2) {
+                        Text(dayGan)
+                            .font(.system(size: 22, weight: .medium))
+                            .foregroundColor(colors.secondary)
+                        Text(dayWx)
+                            .font(.system(size: 22, weight: .light))
+                            .foregroundColor(colors.primary)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 12)
+            }
+            .frame(height: 195)
+        }
+    }
+
+    // MARK: - 大运与流年（四柱风格：天干/地支块，含互动折叠）
+
+    private var daYunLiuNianSection: some View {
+        GlassCard {
+            VStack(spacing: 0) {
+                // 大运流年主体
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("大运与流年")
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(DesignSystem.textPrimary)
-                        .tracking(2)
 
-                    Spacer()
+                    Text("起运 \(viewModel.qiYunAge) 岁 · 每步大运十年")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(DesignSystem.textSecondary)
 
-                    // 调候标签（如有）
-                    if let tiaoHou = viewModel.tiaoHouResult.tiaoHou,
-                       let reason = viewModel.tiaoHouResult.reason {
-                        HStack(spacing: 6) {
-                            Text("调候")
-                                .font(.system(size: 11, weight: .light))
-                                .foregroundColor(DesignSystem.textTertiary)
-                            wuXingCircle(wx: tiaoHou, isFilled: true, size: 24)
-                            Text(reason)
-                                .font(.system(size: 10, weight: .light))
-                                .foregroundColor(DesignSystem.textTertiary)
+                    // 大运：横向一排（可横向滚动），选中项滑动到屏幕中间
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(Array(viewModel.daYunList.enumerated()), id: \.offset) { index, daYun in
+                                    let yearRange = viewModel.yearsForDaYunStep(index)
+                                    let rangeStr = yearRange.isEmpty ? "" : "\(yearRange.first!)"
+                                    let isSelected = index == selectedDaYunIndex
+
+                                    Button {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            selectedDaYunIndex = selectedDaYunIndex == index ? nil : index
+                                        }
+                                    } label: {
+                                        daYunPillar(gan: daYun.gan, zhi: daYun.zhi, age: daYun.age, yearRange: rangeStr, isSelected: isSelected)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .frame(width: 80)
+                                    .id(index)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 2) // 避免首尾大运的描边被裁切
                         }
-                    }
-                }
-
-                // 喜忌五行
-                HStack(spacing: 0) {
-                    // 喜神
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("喜")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(DesignSystem.textSecondary)
-
-                        HStack(spacing: 6) {
-                            ForEach(viewModel.xiYongShenResult.xi, id: \.self) { wx in
-                                wuXingCircle(wx: wx, isFilled: true)
+                        .onChange(of: selectedDaYunIndex) { oldValue, newValue in
+                            // 仅在用户手动切换大运时清空流年（非初始化阶段）
+                            if oldValue != nil {
+                                selectedLiuNianYear = nil
+                            }
+                            guard let idx = newValue else { return }
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo(idx, anchor: .center)
                             }
                         }
                     }
 
-                    Spacer()
-
-                    Divider()
-                        .frame(height: 50)
-
-                    Spacer()
-
-                    // 忌神
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("忌")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(DesignSystem.textSecondary)
-
-                        HStack(spacing: 6) {
-                            ForEach(viewModel.xiYongShenResult.ji, id: \.self) { wx in
-                                wuXingCircle(wx: wx, isFilled: false)
+                    // 流年：全宽横向一排（可选中），显示当前选中大运的十年
+                    if let idx = selectedDaYunIndex, idx < viewModel.daYunList.count {
+                        let years = viewModel.yearsForDaYunStep(idx)
+                        if !years.isEmpty {
+                            liuNianOneRow(years: years, selectedYear: selectedLiuNianYear) { year in
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedLiuNianYear = selectedLiuNianYear == year ? nil : year
+                                }
                             }
+                            .padding(.top, 12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-
-                    Spacer()
                 }
-
-                // 人话解读：实际生活建议
-                xiJiAdviceSection
-            }
-            .padding(20)
-        }
-    }
-
-    // MARK: - 喜忌人话解读
-
-    private var xiJiAdviceSection: some View {
-        let xiList = viewModel.xiYongShenResult.xi
-
-        return VStack(alignment: .leading, spacing: 12) {
-            Divider()
-                .background(Color.gray.opacity(0.2))
-
-            // 方位建议
-            adviceRow(
-                icon: "🧭",
-                title: "有利方位",
-                content: xiList.map { getDirection($0) }.joined(separator: "、")
-            )
-
-            // 颜色建议
-            adviceRow(
-                icon: "🎨",
-                title: "幸运颜色",
-                content: xiList.map { getColor($0) }.joined(separator: "、")
-            )
-
-            // 行业建议
-            adviceRow(
-                icon: "💼",
-                title: "适合行业",
-                content: xiList.flatMap { getIndustries($0) }.prefix(4).joined(separator: "、")
-            )
-        }
-    }
-
-    // MARK: - 健康养生卡片
-
-    private var healthCard: some View {
-        let xiList = viewModel.xiYongShenResult.xi
-        let jiList = viewModel.xiYongShenResult.ji
-
-        return GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("健康养生")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundColor(DesignSystem.textPrimary)
-                    .tracking(2)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    // 饮食宜
-                    adviceRow(
-                        icon: "🥗",
-                        title: "饮食宜",
-                        content: xiList.flatMap { getFoodBenefit($0) }.prefix(4).joined(separator: "、")
-                    )
-
-                    // 饮食忌
-                    adviceRow(
-                        icon: "🚫",
-                        title: "饮食忌",
-                        content: jiList.flatMap { getFoodAvoid($0) }.prefix(3).joined(separator: "、")
-                    )
-
-                    // 运动建议
-                    adviceRow(
-                        icon: "🏃",
-                        title: "运动建议",
-                        content: xiList.flatMap { getExercise($0) }.prefix(3).joined(separator: "、")
-                    )
-
-                    // 易发问题
-                    adviceRow(
-                        icon: "⚠️",
-                        title: "注意部位",
-                        content: jiList.map { getHealthConcern($0) }.joined(separator: "、")
-                    )
+                .padding(.vertical, 24)
+                .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // 展开/收起按钮（仅当选中了大运时显示）
+                if let idx = selectedDaYunIndex, idx < viewModel.daYunList.count {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            isDaYunEnergyExpanded.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if isDaYunEnergyExpanded {
+                                Text("与命盘互动")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(DesignSystem.textTertiary)
+                            }
+                            Image(systemName: isDaYunEnergyExpanded ? "chevron.up" : "chevron.down")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(DesignSystem.textTertiary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    // 展开内容：大运流年与命盘互动
+                    if isDaYunEnergyExpanded {
+                        let daYun = viewModel.daYunList[idx]
+                        
+                        Divider()
+                            .padding(.horizontal, 24)
+                        
+                        EmbeddedDaYunLiuNianEnergyView(
+                            bazi: viewModel.bazi,
+                            daYunGan: daYun.gan,
+                            daYunZhi: daYun.zhi,
+                            liuNianYear: selectedLiuNianYear
+                        )
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 24)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
                 }
             }
-            .padding(20)
         }
     }
 
-    // MARK: - 幸运数字时辰卡片
+    /// 单步大运柱：一个白底容器内排天干+地支；仅用选中状态做视觉区分
+    private func daYunPillar(gan: String, zhi: String, age: Int, yearRange: String, isSelected: Bool = false) -> some View {
+        let ganWx = BaziConstants.wuXing[gan] ?? "木"
+        let zhiWx = BaziConstants.wuXing[zhi] ?? "木"
+        let ganColors = WuXingColor.colors(for: ganWx)
+        let zhiColors = WuXingColor.colors(for: zhiWx)
+        let fontSize: CGFloat = 24
+        let wxFontSize: CGFloat = 9
 
-    private var luckyNumberCard: some View {
-        let xiList = viewModel.xiYongShenResult.xi
-
-        return GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("数字与时辰")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundColor(DesignSystem.textPrimary)
-                    .tracking(2)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    // 幸运数字
-                    adviceRow(
-                        icon: "🔢",
-                        title: "幸运数字",
-                        content: xiList.flatMap { getLuckyNumbers($0) }.map { String($0) }.joined(separator: "、")
-                    )
-
-                    // 有利时辰
-                    adviceRow(
-                        icon: "🕐",
-                        title: "有利时辰",
-                        content: xiList.map { getLuckyHours($0) }.joined(separator: "、")
-                    )
-
-                    // 有利季节
-                    adviceRow(
-                        icon: "🍃",
-                        title: "有利季节",
-                        content: xiList.map { getLuckySeason($0) }.joined(separator: "、")
-                    )
+        // 白底与选择框同一尺寸：一个 80pt 宽容器，背景为白/选中色，描边在外
+        return VStack(spacing: 6) {
+            if !yearRange.isEmpty {
+                Text(yearRange)
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundColor(DesignSystem.textTertiary)
+            }
+            VStack(spacing: 6) {
+                VStack(spacing: 2) {
+                    Text(gan)
+                        .font(.system(size: fontSize, weight: .light))
+                        .foregroundColor(ganColors.secondary)
+                    Text(ganWx)
+                        .font(.system(size: wxFontSize, weight: .light))
+                        .foregroundColor(ganColors.primary)
+                }
+                VStack(spacing: 2) {
+                    Text(zhi)
+                        .font(.system(size: fontSize, weight: .light))
+                        .foregroundColor(zhiColors.secondary)
+                    Text(zhiWx)
+                        .font(.system(size: wxFontSize, weight: .light))
+                        .foregroundColor(zhiColors.primary)
                 }
             }
-            .padding(20)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 8)
+        .frame(width: 80)
+        .background(isSelected ? Color(hex: "FFF9F5") : Color(hex: "FAFAFA"))
+        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusSmall)
+                .strokeBorder(isSelected ? DesignSystem.primaryOrange : Color.clear, lineWidth: isSelected ? 1.5 : 0)
+        )
     }
 
-    // MARK: - 居家环境卡片
+    /// 流年：横向一排显示（十年，可横向滚动），可选中
+    private func liuNianOneRow(years: [Int], selectedYear: Int?, onSelect: @escaping (Int) -> Void) -> some View {
+        let fontSize: CGFloat = 16
+        let wxFontSize: CGFloat = 8
 
-    private var homeEnvironmentCard: some View {
-        let xiList = viewModel.xiYongShenResult.xi
-
-        return GlassCard {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("居家环境")
-                    .font(.system(size: 15, weight: .light))
-                    .foregroundColor(DesignSystem.textPrimary)
-                    .tracking(2)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    // 装饰材质
-                    adviceRow(
-                        icon: "🏠",
-                        title: "适宜材质",
-                        content: xiList.flatMap { getMaterials($0) }.prefix(4).joined(separator: "、")
-                    )
-
-                    // 适合植物
-                    adviceRow(
-                        icon: "🌿",
-                        title: "适合植物",
-                        content: xiList.flatMap { getPlants($0) }.prefix(3).joined(separator: "、")
-                    )
-
-                    // 饰品建议
-                    adviceRow(
-                        icon: "💎",
-                        title: "饰品材质",
-                        content: xiList.flatMap { getAccessories($0) }.prefix(3).joined(separator: "、")
-                    )
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(years, id: \.self) { y in
+                    Button {
+                        onSelect(y)
+                    } label: {
+                        liuNianCell(year: y, fontSize: fontSize, wxFontSize: wxFontSize, isSelected: selectedYear == y)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .padding(20)
+            .padding(.vertical, 4)
         }
     }
 
+    /// 单格流年：一个白底容器内排年份 + 天干+地支（与大运同风格）；选中时有描边
+    private func liuNianCell(year: Int, fontSize: CGFloat, wxFontSize: CGFloat, isSelected: Bool = false) -> some View {
+        let ln = getLiuNianGanZhi(year: year)
+        let ganWx = BaziConstants.wuXing[ln.gan] ?? "木"
+        let zhiWx = BaziConstants.wuXing[ln.zhi] ?? "木"
+        let ganColors = WuXingColor.colors(for: ganWx)
+        let zhiColors = WuXingColor.colors(for: zhiWx)
+        let cellWidth: CGFloat = 56
 
-    private func adviceRow(icon: String, title: String, content: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(icon)
-                .font(.system(size: 12))
-
-            Text(title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(DesignSystem.textSecondary)
-                .frame(width: 56, alignment: .leading)
-
-            Text(content)
-                .font(.system(size: 12, weight: .light))
-                .foregroundColor(DesignSystem.textPrimary)
-                .lineLimit(2)
-
-            Spacer()
+        return VStack(spacing: 4) {
+            Text(verbatim: "\(year)")
+                .font(.system(size: 10, weight: .regular))
+                .foregroundColor(DesignSystem.textTertiary)
+            VStack(spacing: 2) {
+                Text(ln.gan)
+                    .font(.system(size: fontSize, weight: .light))
+                    .foregroundColor(ganColors.secondary)
+                Text(ganWx)
+                    .font(.system(size: wxFontSize, weight: .light))
+                    .foregroundColor(ganColors.primary)
+            }
+            VStack(spacing: 2) {
+                Text(ln.zhi)
+                    .font(.system(size: fontSize, weight: .light))
+                    .foregroundColor(zhiColors.secondary)
+                Text(zhiWx)
+                    .font(.system(size: wxFontSize, weight: .light))
+                    .foregroundColor(zhiColors.primary)
+            }
         }
-    }
-
-    // MARK: - 五行对应的生活建议
-
-    private func getDirection(_ wuXing: String) -> String {
-        switch wuXing {
-        case "木": return "东方"
-        case "火": return "南方"
-        case "土": return "本地/中部"
-        case "金": return "西方"
-        case "水": return "北方"
-        default: return ""
-        }
-    }
-
-    private func getColor(_ wuXing: String) -> String {
-        switch wuXing {
-        case "木": return "绿色、青色"
-        case "火": return "红色、紫色"
-        case "土": return "黄色、棕色"
-        case "金": return "白色、金色"
-        case "水": return "黑色、蓝色"
-        default: return ""
-        }
-    }
-
-    private func getIndustries(_ wuXing: String) -> [String] {
-        switch wuXing {
-        case "木": return ["教育", "出版", "医疗", "环保"]
-        case "火": return ["互联网", "餐饮", "能源", "娱乐"]
-        case "土": return ["房地产", "建筑", "农业", "矿业"]
-        case "金": return ["金融", "机械", "汽车", "法律"]
-        case "水": return ["物流", "旅游", "贸易", "传媒"]
-        default: return []
-        }
-    }
-
-    private func getPartnerTrait(_ wuXing: String) -> String {
-        switch wuXing {
-        case "木": return "高个、温和"
-        case "火": return "热情、开朗"
-        case "土": return "稳重、厚道"
-        case "金": return "果断、干练"
-        case "水": return "聪明、灵活"
-        default: return ""
-        }
-    }
-
-    // MARK: - 健康养生数据
-
-    private func getFoodBenefit(_ wuXing: String) -> [String] {
-        switch wuXing {
-        case "木": return ["绿色蔬菜", "酸味食物", "柠檬", "醋"]
-        case "火": return ["红色食物", "苦味适量", "红枣", "番茄"]
-        case "土": return ["黄色食物", "甘味", "南瓜", "小米"]
-        case "金": return ["白色食物", "辛味适量", "萝卜", "梨"]
-        case "水": return ["黑色食物", "咸味适量", "黑豆", "海带"]
-        default: return []
-        }
-    }
-
-    private func getFoodAvoid(_ wuXing: String) -> [String] {
-        switch wuXing {
-        case "木": return ["过酸", "肝胆负担重的食物"]
-        case "火": return ["过辣", "刺激性食物"]
-        case "土": return ["过甜", "生冷食物"]
-        case "金": return ["过辛", "油炸食物"]
-        case "水": return ["过咸", "寒凉食物"]
-        default: return []
-        }
-    }
-
-    private func getExercise(_ wuXing: String) -> [String] {
-        switch wuXing {
-        case "木": return ["户外徒步", "瑜伽", "太极"]
-        case "火": return ["有氧运动", "跑步", "舞蹈"]
-        case "土": return ["散步", "八段锦", "园艺"]
-        case "金": return ["器械健身", "武术", "攀岩"]
-        case "水": return ["游泳", "冥想", "普拉提"]
-        default: return []
-        }
-    }
-
-    private func getHealthConcern(_ wuXing: String) -> String {
-        switch wuXing {
-        case "木": return "肝胆、眼睛"
-        case "火": return "心脏、血压"
-        case "土": return "脾胃、消化"
-        case "金": return "肺部、呼吸"
-        case "水": return "肾脏、泌尿"
-        default: return ""
-        }
-    }
-
-    // MARK: - 数字时辰数据
-
-    private func getLuckyNumbers(_ wuXing: String) -> [Int] {
-        switch wuXing {
-        case "木": return [3, 8]
-        case "火": return [2, 7]
-        case "土": return [5, 10]
-        case "金": return [4, 9]
-        case "水": return [1, 6]
-        default: return []
-        }
-    }
-
-    private func getLuckyHours(_ wuXing: String) -> String {
-        switch wuXing {
-        case "木": return "寅卯时(3-7点)"
-        case "火": return "巳午时(9-13点)"
-        case "土": return "辰戌丑未时"
-        case "金": return "申酉时(15-19点)"
-        case "水": return "亥子时(21-1点)"
-        default: return ""
-        }
-    }
-
-    private func getLuckySeason(_ wuXing: String) -> String {
-        switch wuXing {
-        case "木": return "春季"
-        case "火": return "夏季"
-        case "土": return "四季交替"
-        case "金": return "秋季"
-        case "水": return "冬季"
-        default: return ""
-        }
-    }
-
-    // MARK: - 居家环境数据
-
-    private func getMaterials(_ wuXing: String) -> [String] {
-        switch wuXing {
-        case "木": return ["实木家具", "竹制品", "藤编"]
-        case "火": return ["皮革", "羊毛", "灯饰"]
-        case "土": return ["陶瓷", "石材", "砖瓦"]
-        case "金": return ["金属制品", "不锈钢", "铜器"]
-        case "水": return ["玻璃", "水晶", "镜面"]
-        default: return []
-        }
-    }
-
-    private func getPlants(_ wuXing: String) -> [String] {
-        switch wuXing {
-        case "木": return ["发财树", "绿萝", "龟背竹"]
-        case "火": return ["红掌", "朱顶红", "三角梅"]
-        case "土": return ["多肉", "仙人掌", "虎皮兰"]
-        case "金": return ["白掌", "栀子花", "茉莉"]
-        case "水": return ["富贵竹", "铜钱草", "碗莲"]
-        default: return []
-        }
-    }
-
-    private func getAccessories(_ wuXing: String) -> [String] {
-        switch wuXing {
-        case "木": return ["檀木", "小叶紫檀", "绿松石"]
-        case "火": return ["红玛瑙", "石榴石", "紫水晶"]
-        case "土": return ["黄水晶", "蜜蜡", "玉石"]
-        case "金": return ["银饰", "白水晶", "珍珠"]
-        case "水": return ["黑曜石", "海蓝宝", "月光石"]
-        default: return []
-        }
-    }
-
-    // MARK: - 日主比喻（简短人话）
-
-    private func getDayMasterMetaphor(_ gan: String) -> String {
-        switch gan {
-        case "甲": return "像参天大树，正直有担当，喜欢当领头羊"
-        case "乙": return "像花草藤蔓，温和善变通，懂得借力使力"
-        case "丙": return "像太阳光芒，热情又大方，天生感染力"
-        case "丁": return "像烛火温暖，细腻有洞察，内热外含蓄"
-        case "戊": return "像高山大地，稳重又可靠，给人安全感"
-        case "己": return "像田园沃土，温厚又细心，善于照顾人"
-        case "庚": return "像刀剑斧钺，刚毅又果断，做事雷厉风行"
-        case "辛": return "像珠宝首饰，精致有品味，追求完美主义"
-        case "壬": return "像江河大海，聪慧又宽广，善于谋略变通"
-        case "癸": return "像雨露溪流，敏感又灵动，直觉力很强"
-        default: return ""
-        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 6)
+        .frame(width: cellWidth)
+        .background(isSelected ? Color(hex: "FFF9F5") : Color(hex: "FAFAFA"))
+        .clipShape(RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusSmall))
+        .overlay(
+            RoundedRectangle(cornerRadius: DesignSystem.cornerRadiusSmall)
+                .strokeBorder(isSelected ? DesignSystem.primaryOrange : Color.clear, lineWidth: isSelected ? 1.5 : 0)
+        )
     }
 
     private func wuXingCircle(wx: String, isFilled: Bool, size: CGFloat = 32) -> some View {
@@ -1032,5 +541,78 @@ struct MingPanView: View {
             }
         }
     }
+    
+}
 
+// MARK: - 竖排文字（两列，过滤标点）
+
+private struct VerticalText: View {
+    let text: String
+    let color: Color
+    
+    private let maxCharsPerColumn = 5
+    
+    // 过滤掉标点符号
+    private static let punctuations: Set<Character> = ["，", "。", "、", "；", "：", "\"", "'", ",", ".", ";", ":", "!", "?", "！", "？"]
+    
+    private var filteredChars: [Character] {
+        text.filter { char in
+            !char.isPunctuation && !Self.punctuations.contains(char)
+        }.prefix(maxCharsPerColumn * 2).map { $0 }
+    }
+    
+    var body: some View {
+        let chars = filteredChars
+        let firstColumn = Array(chars.prefix(maxCharsPerColumn))
+        let secondColumn = Array(chars.dropFirst(maxCharsPerColumn))
+        
+        HStack(alignment: .top, spacing: 6) {
+            // 第一列
+            VStack(spacing: 3) {
+                ForEach(Array(firstColumn.enumerated()), id: \.offset) { _, char in
+                    Text(String(char))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(color)
+                }
+            }
+            
+            // 第二列
+            if !secondColumn.isEmpty {
+                VStack(spacing: 3) {
+                    ForEach(Array(secondColumn.enumerated()), id: \.offset) { _, char in
+                        Text(String(char))
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(color)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - 波浪底部形状（用于图形区域裁剪）
+
+private struct WaveBottomShape: Shape {
+    let waveHeight: CGFloat
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+        let midY = h - waveHeight / 2
+        
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: w, y: 0))
+        path.addLine(to: CGPoint(x: w, y: midY))
+        
+        // 平滑正弦波浪（从右到左）
+        path.addCurve(
+            to: CGPoint(x: 0, y: midY),
+            control1: CGPoint(x: w * 0.75, y: midY + waveHeight),
+            control2: CGPoint(x: w * 0.25, y: midY - waveHeight)
+        )
+        
+        path.closeSubpath()
+        return path
+    }
 }

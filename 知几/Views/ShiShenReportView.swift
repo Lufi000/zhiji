@@ -1,6 +1,7 @@
 import SwiftUI
 
 // MARK: - 十神解读报告视图
+// TODO: 本视图暂无展示入口。若产品需要「十神解读」全屏报告，需在命盘页增加入口（如按钮），构建 ShiShenReport 后 present 本视图。
 
 struct ShiShenReportView: View {
     let report: ShiShenReport
@@ -27,8 +28,8 @@ struct ShiShenReportView: View {
                     Spacer()
                         .frame(height: 80)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
             }
             .background(Color(UIColor.systemBackground))
             .navigationTitle("十神解读")
@@ -71,15 +72,6 @@ struct ShiShenReportView: View {
                 }
 
                 Spacer()
-
-                // 身强身弱
-                Text("\(report.dayMaster.strength) (\(report.dayMaster.strengthScore)分)")
-                    .font(.system(size: 13))
-                    .foregroundColor(DesignSystem.textSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color.gray.opacity(0.1))
-                    .clipShape(Capsule())
             }
 
             // 描述
@@ -124,7 +116,7 @@ struct ShiShenReportView: View {
                 }
             }
         }
-        .padding(16)
+        .padding(24)
         .background(colors.secondary.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }

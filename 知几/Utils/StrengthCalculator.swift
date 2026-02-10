@@ -1,44 +1,25 @@
 import Foundation
 
-// MARK: - 身强身弱计算常量
+// MARK: - 能量配置计算常量
 
-/// 身强身弱判定阈值
+/// 能量配置判定阈值（直接使用能量配置等级）
 ///
 /// 计算原理：八字中共有8个位置（4天干+4地支），总分100分
 /// - 天干权重较低（年干5、月干5、时干5 = 15分）
 /// - 地支权重较高（年支20、月支35、日支20、时支10 = 85分）
 /// - 月支（月令）权重最高，因为"得令者旺"
 ///
-/// 判定标准：
-/// - 极强(≥80)：同类五行占据绝大多数位置，几乎无克泄耗
-/// - 身强(46-79)：同类五行占优势，得月令或多处帮扶
-/// - 身弱(21-45)：异类五行占优势，缺乏帮扶
-/// - 极弱(<21)：同类五行极少，几乎全是克泄耗
+/// 判定标准（能量配置模式：自主型 / 均衡型 / 协作型）：
+/// - 自主型(≥46)：同类五行占优势，内在资源较充沛，倾向于独立应对
+/// - 均衡型(21-45)：相对均衡，可独立可协作
+/// - 协作型(<21)：需要更多补充，倾向于借助外力、协作应对
 private enum StrengthThreshold {
-    static let veryStrong = 80
-    static let strong = 46
-    static let weak = 21
+    static let strong = 46   // ≥46 → 自主型
+    static let weak = 21     // 21..<46 → 均衡型，<21 → 协作型
 }
 
-// MARK: - 身强身弱计算结果
-
-struct StrengthResult {
-    let strength: String   // "极强"、"身强"、"身弱"、"极弱"
-    let score: Int
-    let details: String
-}
-
-struct XiYongShenResult {
-    let xi: [String]   // 喜神五行
-    let ji: [String]   // 忌神五行
-}
-
-struct TiaoHouResult {
-    let tiaoHou: String?   // 调候用神
-    let reason: String?    // 调候原因说明
-}
-
-// MARK: - 身强身弱计算器
+// MARK: - 能量配置计算器（直接输出能量配置等级）
+// 结果类型定义在 Models/StrengthModels.swift，此处仅负责计算
 
 struct StrengthCalculator {
     let bazi: Bazi
@@ -92,7 +73,7 @@ struct StrengthCalculator {
         return count
     }
 
-    /// 计算身强身弱
+    /// 计算能量配置（直接返回能量配置等级）
     func calculate() -> StrengthResult {
         let dayWx = BaziConstants.wuXing[bazi.day.gan] ?? "木"
         var score = 0
@@ -184,52 +165,33 @@ struct StrengthCalculator {
         return StrengthResult(strength: strength, score: score, details: details)
     }
 
-    /// 根据分数判断身强身弱等级
+    /// 根据分数判断能量配置模式（自主型 / 均衡型 / 协作型）
     private func determineStrength(score: Int) -> String {
         switch score {
-        case StrengthThreshold.veryStrong...:
-            return "极强"
-        case StrengthThreshold.strong..<StrengthThreshold.veryStrong:
-            return "身强"
+        case StrengthThreshold.strong...:
+            return "自主型"
         case StrengthThreshold.weak..<StrengthThreshold.strong:
-            return "身弱"
+            return "均衡型"
         default:
-            return "极弱"
+            return "协作型"
         }
     }
 
-    /// 计算喜用神
+    /// 计算喜用五行（入参为能量配置模式：自主型/均衡型/协作型）
     func calculateXiYongShen(strength: String) -> XiYongShenResult {
         let dayWx = BaziConstants.wuXing[bazi.day.gan] ?? "木"
 
-        // 生我者（印星）
         let shengWoWx = BaziConstants.wuXingSheng.first { $0.value == dayWx }?.key ?? ""
-        // 我生者（食伤）
         let woShengWx = BaziConstants.wuXingSheng[dayWx] ?? ""
-        // 克我者（官杀）
         let keWoWx = BaziConstants.wuXingKe.first { $0.value == dayWx }?.key ?? ""
-        // 我克者（财星）
         let woKeWx = BaziConstants.wuXingKe[dayWx] ?? ""
 
         switch strength {
-        case "身强", "极强":
-            // 身强喜克泄耗：官杀、食伤、财星
+        case "自主型":
             return XiYongShenResult(xi: [keWoWx, woShengWx, woKeWx], ji: [shengWoWx, dayWx])
-
-        case "身弱", "极弱":
-            // 身弱喜生扶：印星、比劫
+        case "均衡型", "协作型":
             return XiYongShenResult(xi: [shengWoWx, dayWx], ji: [keWoWx, woShengWx, woKeWx])
-
-        case "从强":
-            // 从强格：顺从强势，喜生扶
-            return XiYongShenResult(xi: [shengWoWx, dayWx], ji: [keWoWx, woShengWx, woKeWx])
-
-        case "从弱":
-            // 从弱格：顺从弱势，喜克泄耗
-            return XiYongShenResult(xi: [keWoWx, woShengWx, woKeWx], ji: [shengWoWx, dayWx])
-
         default:
-            // 默认按身弱处理
             return XiYongShenResult(xi: [shengWoWx, dayWx], ji: [keWoWx, woShengWx, woKeWx])
         }
     }

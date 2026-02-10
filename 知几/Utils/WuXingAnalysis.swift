@@ -18,6 +18,14 @@ struct BaziContext {
         self.monthZhi = bazi.month.zhi
     }
 
+    /// 从 Bazi + 额外一柱（如大运/流年）创建上下文，用于分析该柱与命盘的互动
+    init(bazi: Bazi, extraGan: String, extraZhi: String, extraPositionName: String) {
+        self.allGan = [bazi.year.gan, bazi.month.gan, bazi.day.gan, bazi.hour.gan, extraGan]
+        self.allZhi = [bazi.year.zhi, bazi.month.zhi, bazi.day.zhi, bazi.hour.zhi, extraZhi]
+        self.positions = ["年", "月", "日", "时", extraPositionName]
+        self.monthZhi = bazi.month.zhi
+    }
+
     /// 完整初始化
     init(allGan: [String], allZhi: [String], positions: [String], monthZhi: String) {
         self.allGan = allGan
@@ -51,6 +59,26 @@ func analyzeWuXingRelations(bazi: Bazi) -> WuXingAnalysis {
         chongXingHaiResults: chongXingHaiResults,
         kuResults: kuResults,
         tanShengWangKeResults: tanShengWangKeResults
+    )
+}
+
+/// 分析「额外一柱」（如大运/流年）与命盘的五行互动
+/// - Parameters:
+///   - bazi: 命盘
+///   - extraGan: 额外柱天干（如大运干）
+///   - extraZhi: 额外柱地支（如大运支）
+///   - extraPositionName: 该柱在结果中的名称（如 "大运"、"流年"）
+/// - Returns: 仅包含「涉及该柱」的合、冲刑破害、库（贪生忘克暂不纳入）
+func analyzeBaziWithExtraPillar(bazi: Bazi, extraGan: String, extraZhi: String, extraPositionName: String) -> WuXingAnalysis {
+    let context = BaziContext(bazi: bazi, extraGan: extraGan, extraZhi: extraZhi, extraPositionName: extraPositionName)
+    let heResults = checkHe(context: context).filter { $0.positions.contains(extraPositionName) }
+    let chongXingHaiResults = checkChongXingHai(context: context).filter { $0.positions.contains(extraPositionName) }
+    let kuResults = checkKu(context: context).filter { $0.position == extraPositionName }
+    return WuXingAnalysis(
+        heResults: heResults,
+        chongXingHaiResults: chongXingHaiResults,
+        kuResults: kuResults,
+        tanShengWangKeResults: []
     )
 }
 

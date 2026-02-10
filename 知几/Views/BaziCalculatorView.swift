@@ -6,8 +6,9 @@ private enum PickerData {
     static let years = Array(1900...2100)
     static let months = Array(1...12)
     static let hours = Array(0...23)
+    static let minutes = Array(0...59)
 
-    /// 预计算的时辰显示文本
+    /// 预计算的时辰显示文本（整点）
     static let hourTexts: [String] = hours.map { h in
         "\(h):00 (\(BaziConstants.diZhi[((h + 1) / 2) % 12])时)"
     }
@@ -20,10 +21,12 @@ struct BaziCalculatorView: View {
     @State private var selectedMonth = 8
     @State private var selectedDay = 28
     @State private var selectedHour = 10
+    @State private var selectedMinute = 0
     @State private var gender = "male"
     @State private var showResult = false
     @State private var bazi: Bazi?
     @State private var resultViewId = UUID()  // 用于强制 ResultView 重建
+    @State private var validationError: BaziCalculationError?
 
     // 根据年月计算当月天数
     var daysInMonth: Int {
@@ -82,10 +85,17 @@ struct BaziCalculatorView: View {
                         // 输入表单
                         inputForm
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 20)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 24)
                 }
             }
+        }
+        .alert(item: $validationError) { error in
+            Alert(
+                title: Text("无法排盘"),
+                message: Text(error.errorDescription ?? ""),
+                dismissButton: .default(Text("确定"))
+            )
         }
     }
 
@@ -140,16 +150,29 @@ struct BaziCalculatorView: View {
                 }
             }
 
-            // 时辰选择
-            Text("出生时辰")
+            // 出生时间（几点几分）
+            Text("出生时间")
                 .formLabel()
 
-            Picker("时辰", selection: $selectedHour) {
-                ForEach(PickerData.hours, id: \.self) { h in
-                    Text(PickerData.hourTexts[h]).tag(h)
+            HStack(spacing: 0) {
+                Picker("时", selection: $selectedHour) {
+                    ForEach(PickerData.hours, id: \.self) { h in
+                        Text(PickerData.hourTexts[h]).tag(h)
+                    }
                 }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                .clipped()
+
+                Picker("分", selection: $selectedMinute) {
+                    ForEach(PickerData.minutes, id: \.self) { m in
+                        Text(String(format: "%02d分", m)).tag(m)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                .clipped()
             }
-            .pickerStyle(.wheel)
             .frame(height: 120)
 
             // 性别选择
@@ -217,11 +240,38 @@ struct BaziCalculatorView: View {
         }
     }
 
-    func getBirthComponents() -> (year: Int, month: Int, day: Int, hour: Int) {
-        return (selectedYear, selectedMonth, selectedDay, selectedHour)
+    func getBirthComponents() -> (year: Int, month: Int, day: Int, hour: Int, minute: Int) {
+        return (selectedYear, selectedMonth, selectedDay, selectedHour, selectedMinute)
     }
 
     func calculate() {
+        // 入口校验：日期与时辰
+        switch BaziValidator.validateDate(year: selectedYear, month: selectedMonth, day: selectedDay) {
+        case .failure(let error):
+            BaziLogger.shared.logCalculationError(error, context: "排盘入口")
+            if error.isUserFacing { validationError = error }
+            return
+        case .success:
+            break
+        }
+        switch BaziValidator.validateHour(selectedHour) {
+        case .failure(let error):
+            BaziLogger.shared.logCalculationError(error, context: "排盘入口")
+            if error.isUserFacing { validationError = error }
+            return
+        case .success:
+            break
+        }
+        switch BaziValidator.validateYearForJieqi(selectedYear) {
+        case .failure(let error):
+            BaziLogger.shared.logCalculationError(error, context: "排盘入口")
+            if error.isUserFacing { validationError = error }
+            return
+        case .success:
+            break
+        }
+        validationError = nil
+
         let lunar = PillarCalculator.getYearPillar(year: selectedYear, month: selectedMonth, day: selectedDay)
         let dayPillar = PillarCalculator.getDayPillar(year: selectedYear, month: selectedMonth, day: selectedDay)
 

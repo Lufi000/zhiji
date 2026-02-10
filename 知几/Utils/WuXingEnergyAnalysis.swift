@@ -199,7 +199,7 @@ struct WuXingEnergyAnalyzer {
         let tongLeiPercentage = tongLeiItems.reduce(0) { $0 + $1.percentage }
 
         switch tongLeiPercentage {
-        case 50...: return "得助极强"
+        case 50...: return "得助很强"
         case 40..<50: return "得助较强"
         case 30..<40: return "得助中等"
         case 20..<30: return "得助较弱"

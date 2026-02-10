@@ -54,6 +54,7 @@ struct ShiShenSummary {
 }
 
 /// 完整的十神解读报告
+/// - TODO: 暂未接入。若产品需要「十神解读」全屏报告，需增加从 ResultViewModel / StrengthCalculator / ShiShenAnalyzer 等构建本结构的工厂，并在命盘页提供展示入口。
 struct ShiShenReport {
     let dayMaster: DayMasterSection       // 日主概述
     let pillarAnalysisList: [PillarAnalysis]  // 四柱分析
@@ -67,7 +68,6 @@ struct ShiShenReport {
         text += "【日主概述】\n\n"
         text += "你的日主是\(dayMaster.gan)，五行属\(dayMaster.wuXing)。\n"
         text += dayMaster.description + "\n\n"
-        text += "命局强弱：\(dayMaster.strength)（\(dayMaster.strengthScore)分）\n"
 
         if let xiYong = dayMaster.xiYong, !xiYong.xi.isEmpty {
             text += "喜神：\(xiYong.xi.joined(separator: "、"))\n"

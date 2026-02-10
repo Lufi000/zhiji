@@ -1,6 +1,10 @@
 import Foundation
 
 // MARK: - 八字常量（封装在枚举中避免命名空间污染）
+//
+// 迁移策略：新逻辑优先使用类型安全层（Models/GanZhiTypes.swift）。
+// - 天干/地支/五行/阴阳：使用 TianGan / DiZhi / WuXing 枚举及 String.asTianGan / .asDiZhi / .ganZhiWuXing 等扩展。
+// - 旧代码在改动时顺带替换为枚举；未改动的调用可继续使用本常量，保持单一数据源（本文件与 GanZhiTypes 需同步维护直至迁移完成）。
 
 enum BaziConstants {
     // MARK: - 天干地支基础数据

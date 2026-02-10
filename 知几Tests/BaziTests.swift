@@ -375,6 +375,94 @@ struct DaYunTests {
         #expect(age >= 1)
         #expect(age <= 10)
     }
+
+    /// 1995/10/05 女命：月柱应为乙酉，阴年女顺排，2027年应在己丑大运（第4步 32–41岁）
+    @Test("1995年10月5日女命大运与起运")
+    func testDaYun1995Female() {
+        let lunar = getLunar(year: 1995, month: 10, day: 5)
+        #expect(lunar.yearGan == "乙")
+        #expect(lunar.yearZhi == "亥")
+
+        let monthPillar = getMonthPillar(year: 1995, month: 10, day: 5, yearGan: lunar.yearGan)
+        #expect(monthPillar.gan == "乙")
+        #expect(monthPillar.zhi == "酉")
+
+        let qiYunAge = calculateQiYunAge(
+            birthYear: 1995,
+            birthMonth: 10,
+            birthDay: 5,
+            gender: "female",
+            yearGan: lunar.yearGan,
+            monthZhi: monthPillar.zhi
+        )
+        #expect(qiYunAge >= 1)
+        #expect(qiYunAge <= 4)
+
+        let daYunList = getDaYun(
+            gender: "female",
+            yearGan: lunar.yearGan,
+            monthGan: monthPillar.gan,
+            monthZhi: monthPillar.zhi,
+            qiYunAge: qiYunAge
+        )
+        #expect(daYunList.count == 11)
+        // 阴年女顺排：第一步丙戌、第二步丁亥、第三步戊子、第四步己丑
+        #expect(daYunList[0].gan == "丙")
+        #expect(daYunList[0].zhi == "戌")
+        #expect(daYunList[3].gan == "己")
+        #expect(daYunList[3].zhi == "丑")
+
+        // 第4步大运显示为虚岁 qiYunAge+31..qiYunAge+40 对应年份（起算次年），2027年虚岁=33，应在第4步
+        let step4StartAge = qiYunAge + 30 + 1
+        let step4EndAge = qiYunAge + 40
+        let year2027Age = 2027 - 1995 + 1
+        #expect(year2027Age >= step4StartAge)
+        #expect(year2027Age <= step4EndAge)
+    }
+
+    /// 1992/8/28 10:00 男：壬申年申月（戊申），阳年男顺排，2026年开始走壬子大运（第4步）
+    @Test("1992年8月28日男命大运与起运")
+    func testDaYun1992Male() {
+        let lunar = getLunar(year: 1992, month: 8, day: 28)
+        #expect(lunar.yearGan == "壬")
+        #expect(lunar.yearZhi == "申")
+
+        let monthPillar = getMonthPillar(year: 1992, month: 8, day: 28, yearGan: lunar.yearGan)
+        #expect(monthPillar.gan == "戊")
+        #expect(monthPillar.zhi == "申")
+
+        let qiYunAge = calculateQiYunAge(
+            birthYear: 1992,
+            birthMonth: 8,
+            birthDay: 28,
+            gender: "male",
+            yearGan: lunar.yearGan,
+            monthZhi: monthPillar.zhi
+        )
+        #expect(qiYunAge >= 1)
+        #expect(qiYunAge <= 10)
+
+        let daYunList = getDaYun(
+            gender: "male",
+            yearGan: lunar.yearGan,
+            monthGan: monthPillar.gan,
+            monthZhi: monthPillar.zhi,
+            qiYunAge: qiYunAge
+        )
+        #expect(daYunList.count == 11)
+        // 阳年男顺排：第一步己酉、第二步庚戌、第三步辛亥、第四步壬子
+        #expect(daYunList[0].gan == "己")
+        #expect(daYunList[0].zhi == "酉")
+        #expect(daYunList[3].gan == "壬")
+        #expect(daYunList[3].zhi == "子")
+
+        // 2026年开始走壬子大运：第4步首年应为2026（虚岁35）
+        let step4StartAge = qiYunAge + 30 + 1
+        let step4EndAge = qiYunAge + 40
+        let year2026Age = 2026 - 1992 + 1
+        #expect(year2026Age >= step4StartAge)
+        #expect(year2026Age <= step4EndAge)
+    }
 }
 
 // MARK: - 类型安全枚举测试

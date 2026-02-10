@@ -15,7 +15,6 @@ enum ExplanationType: Equatable, Identifiable {
     case cangGan(String, pillar: String, shiShen: String?)  // 藏干，所在柱位，十神
     case shiShen(String)                                     // 十神
     case pillar(String)                                      // 柱位
-    case strength(String)                                    // 身强身弱
 
     var id: String {
         switch self {
@@ -29,8 +28,6 @@ enum ExplanationType: Equatable, Identifiable {
             return "shiShen-\(shiShen)"
         case .pillar(let pillar):
             return "pillar-\(pillar)"
-        case .strength(let strength):
-            return "strength-\(strength)"
         }
     }
 }
@@ -79,9 +76,6 @@ struct ExplanationSheetView: View {
 
         case .pillar(let pillar):
             pillarHeader(name: pillar)
-
-        case .strength(let strength):
-            strengthHeader(name: strength)
         }
     }
 
@@ -123,25 +117,6 @@ struct ExplanationSheetView: View {
         }
     }
 
-    // 身强身弱标题
-    private func strengthHeader(name: String) -> some View {
-        HStack(alignment: .center, spacing: 16) {
-            Text(name)
-                .font(.system(size: 36, weight: .medium))
-                .foregroundColor(DesignSystem.textPrimary)
-
-            Text("身强身弱")
-                .font(.system(size: 14))
-                .foregroundColor(DesignSystem.textTertiary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.gray.opacity(0.1))
-                .clipShape(Capsule())
-
-            Spacer()
-        }
-    }
-
     // MARK: - 内容区
 
     @ViewBuilder
@@ -171,9 +146,6 @@ struct ExplanationSheetView: View {
             if let explanation = BaziExplanations.getPillarExplanation(pillar) {
                 pillarContent(explanation: explanation)
             }
-
-        case .strength(let strength):
-            strengthContent(currentStrength: strength)
         }
     }
 
@@ -313,9 +285,19 @@ struct ExplanationSheetView: View {
                     .clipShape(Capsule())
             }
 
-            // 十神在柱位的解释（透干用天干解释，藏干用地支解释）
             if let description = description {
                 Text(description)
+                    .font(.system(size: 13))
+                    .foregroundColor(DesignSystem.textSecondary)
+                    .lineSpacing(4)
+            }
+
+            // 反面：结合柱位（透干用天干反面，藏干用柱位反面）
+            let fanMianDesc: String? = isCangGan
+                ? BaziExplanations.getShiShenInPillarFanMianExplanation(shiShen: shiShen, pillar: pillar)
+                : BaziExplanations.getShiShenInTianGanFanMianExplanation(shiShen: shiShen, pillar: pillar)
+            if let fanMianDesc = fanMianDesc {
+                Text(fanMianDesc)
                     .font(.system(size: 13))
                     .foregroundColor(DesignSystem.textSecondary)
                     .lineSpacing(4)
@@ -530,9 +512,15 @@ struct ExplanationSheetView: View {
                     .clipShape(Capsule())
             }
 
-            // 解释
             if let description = BaziExplanations.getShiShenInPillarExplanation(shiShen: info.shiShen, pillar: pillar) {
                 Text(description)
+                    .font(.system(size: 13))
+                    .foregroundColor(DesignSystem.textSecondary)
+                    .lineSpacing(4)
+            }
+
+            if let fanMianDesc = BaziExplanations.getShiShenInPillarFanMianExplanation(shiShen: info.shiShen, pillar: pillar) {
+                Text(fanMianDesc)
                     .font(.system(size: 13))
                     .foregroundColor(DesignSystem.textSecondary)
                     .lineSpacing(4)
@@ -543,17 +531,26 @@ struct ExplanationSheetView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
-    // 十神内容
+    // 十神内容（正反两面同逻辑、同字号同样式，无「正面/反面」标题，无灰底）
     private func shiShenContent(explanation: ShiShenExplanation) -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            // 描述
             Text(explanation.description)
                 .font(.system(size: 16))
                 .foregroundColor(DesignSystem.textPrimary)
                 .lineSpacing(6)
 
-            // 关键词
             keywordsSection(keywords: explanation.keywords)
+
+            if let fanMianDesc = BaziExplanations.getShiShenFanMianDescription(explanation.name) {
+                Text(fanMianDesc)
+                    .font(.system(size: 16))
+                    .foregroundColor(DesignSystem.textPrimary)
+                    .lineSpacing(6)
+
+                if let fanMianBrief = BaziExplanations.getShiShenFanMian(explanation.name) {
+                    keywordsSection(keywords: fanMianBrief.split(separator: "、").map { String($0) })
+                }
+            }
         }
     }
 
@@ -584,52 +581,6 @@ struct ExplanationSheetView: View {
                     }
                 }
             }
-        }
-    }
-
-    // 身强身弱内容
-    private func strengthContent(currentStrength: String) -> some View {
-        VStack(alignment: .leading, spacing: 24) {
-            // 当前身强身弱类型的解释
-            if let explanation = BaziExplanations.getStrengthExplanation(currentStrength) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(explanation.description)
-                        .font(.system(size: 15))
-                        .foregroundColor(DesignSystem.textPrimary)
-                        .lineSpacing(6)
-
-                    // 特点标签
-                    FlowLayout(spacing: 8) {
-                        ForEach(explanation.traits, id: \.self) { trait in
-                            Text(trait)
-                                .font(.system(size: 13))
-                                .foregroundColor(DesignSystem.textPrimary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(DesignSystem.primaryOrange.opacity(0.1))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-                .padding(16)
-                .background(DesignSystem.primaryOrange.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
-            // 身强身弱概念科普
-            VStack(alignment: .leading, spacing: 12) {
-                Text("什么是身强身弱？")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(DesignSystem.textSecondary)
-
-                Text(BaziExplanations.getStrengthConcept())
-                    .font(.system(size: 14))
-                    .foregroundColor(DesignSystem.textPrimary)
-                    .lineSpacing(5)
-            }
-            .padding(14)
-            .background(Color.gray.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
     }
 

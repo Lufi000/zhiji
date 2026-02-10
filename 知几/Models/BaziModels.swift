@@ -26,7 +26,7 @@ struct Bazi {
     let shengXiao: String
 }
 
-/// 大运（每10年一步运）
+/// 大运（每10年一步运，BaziCalculations 用）
 struct DaYun {
     let gan: String   // 大运天干
     let zhi: String   // 大运地支
@@ -103,80 +103,3 @@ struct WuXingAnalysis {
     let tanShengWangKeResults: [GreedyProductionResult]  // 贪生忘克
 }
 
-// MARK: - 月运势模型
-
-/// 月运势数据
-struct MonthlyFortune: Identifiable {
-    let id = UUID()
-    let year: Int                 // 年份
-    let month: Int                // 月份（1-12）
-    let gan: String               // 月干
-    let zhi: String               // 月支
-    let ganShiShen: String        // 天干十神
-    let zhiShiShen: String        // 地支十神
-    let fortuneScore: Int         // 运势评分（1-100）
-    let fortuneLevel: FortuneLevel  // 运势等级
-    let keywords: [String]        // 本月关键词
-    let advice: String            // 本月建议
-
-    /// 月份显示名称
-    var monthName: String {
-        "\(month)月"
-    }
-
-    /// 判断是否为当前月
-    var isCurrentMonth: Bool {
-        let calendar = Calendar.current
-        let now = Date()
-        let currentYear = calendar.component(.year, from: now)
-        let currentMonth = calendar.component(.month, from: now)
-        return year == currentYear && month == currentMonth
-    }
-}
-
-// MARK: - 周运势模型
-
-/// 周运势数据
-struct WeeklyFortune: Identifiable {
-    let id = UUID()
-    let weekStartDate: Date      // 周一日期
-    let weekEndDate: Date        // 周日日期
-    let weekNumber: Int          // 当年第几周
-    let gan: String              // 周主干（基于周一日干）
-    let zhi: String              // 周主支（基于周一日支）
-    let ganShiShen: String       // 天干十神
-    let zhiShiShen: String       // 地支十神
-    let fortuneScore: Int        // 运势评分（1-100）
-    let fortuneLevel: FortuneLevel  // 运势等级
-    let keywords: [String]       // 本周关键词
-    let advice: String           // 本周建议
-}
-
-/// 运势等级
-enum FortuneLevel: String {
-    case excellent = "大吉"
-    case good = "吉"
-    case neutral = "平"
-    case caution = "小凶"
-    case poor = "凶"
-
-    var color: String {
-        switch self {
-        case .excellent: return "#D35400"  // 橙红（与app主色调一致）
-        case .good: return "#4A9F5E"       // 木绿
-        case .neutral: return "#8B7355"    // 土棕
-        case .caution: return "#F5B041"    // 金黄
-        case .poor: return "#2980B9"       // 水蓝
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .excellent: return "sun.max.fill"
-        case .good: return "leaf.fill"
-        case .neutral: return "circle.fill"
-        case .caution: return "exclamationmark.triangle.fill"
-        case .poor: return "cloud.fill"
-        }
-    }
-}

@@ -4,7 +4,7 @@ import os.log
 // MARK: - 八字计算错误类型
 
 /// 八字计算过程中可能出现的错误
-enum BaziCalculationError: LocalizedError {
+enum BaziCalculationError: LocalizedError, Identifiable {
     /// 日期无效
     case invalidDate(year: Int, month: Int, day: Int)
     /// 时辰无效
@@ -50,6 +50,9 @@ enum BaziCalculationError: LocalizedError {
             return false
         }
     }
+
+    /// 用于 .alert(item:) 展示
+    var id: String { errorDescription ?? UUID().uuidString }
 }
 
 // MARK: - 日志管理器

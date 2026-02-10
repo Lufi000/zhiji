@@ -11,6 +11,8 @@ struct GanZhiItemView: View {
     let bottomLabel: String     // 底部标签（"xx岁"）
     let isSelected: Bool
     let isCurrent: Bool
+    /// true 时左右内边距为 0，与 HStack(spacing: 0) 配合使项紧贴
+    var tightHorizontal: Bool = false
     let onTap: () -> Void
 
     var body: some View {
@@ -19,66 +21,66 @@ struct GanZhiItemView: View {
         let ganColors = WuXingColor.colors(for: ganWx)
         let zhiColors = WuXingColor.colors(for: zhiWx)
 
-        VStack(spacing: 4) {
-            VStack(spacing: 4) {
+        VStack(spacing: 2) {
+            VStack(spacing: 2) {
                 // 顶部标签
                 Text(topLabel)
-                    .font(.system(size: 9, weight: isSelected ? .medium : .light))
+                    .font(.system(size: 8, weight: isSelected ? .medium : .light))
                     .foregroundColor(isSelected ? DesignSystem.primaryOrange : DesignSystem.textTertiary)
 
                 // 天干十神
                 Text(ganShiShen)
-                    .font(.system(size: 9, weight: .light))
+                    .font(.system(size: 8, weight: .light))
                     .foregroundColor(DesignSystem.textTertiary)
 
                 // 天干 + 五行（五行在底部）
-                VStack(spacing: 1) {
+                VStack(spacing: 0) {
                     Text(gan)
-                        .font(.system(size: 20, weight: .light))
+                        .font(.system(size: 15, weight: .light))
                         .foregroundColor(ganColors.secondary)
                     Text(ganWx)
-                        .font(.system(size: 9, weight: .light))
+                        .font(.system(size: 8, weight: .light))
                         .foregroundColor(ganColors.secondary.opacity(0.6))
                 }
 
                 // 地支 + 五行（五行在底部）
-                VStack(spacing: 1) {
+                VStack(spacing: 0) {
                     Text(zhi)
-                        .font(.system(size: 20, weight: .light))
+                        .font(.system(size: 15, weight: .light))
                         .foregroundColor(zhiColors.secondary)
                     Text(zhiWx)
-                        .font(.system(size: 9, weight: .light))
+                        .font(.system(size: 8, weight: .light))
                         .foregroundColor(zhiColors.secondary.opacity(0.6))
                 }
 
                 // 地支十神
                 Text(zhiShiShen)
-                    .font(.system(size: 9, weight: .light))
+                    .font(.system(size: 8, weight: .light))
                     .foregroundColor(DesignSystem.textTertiary)
 
                 // 底部标签
                 Text(bottomLabel)
-                    .font(.system(size: 8, weight: .light))
+                    .font(.system(size: 7, weight: .light))
                     .foregroundColor(DesignSystem.textTertiary)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .padding(.horizontal, tightHorizontal ? 0 : 4)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 10)
                     .fill(isSelected ? Color(hex: "FFF5EE") : Color(hex: "FAFAFA"))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? DesignSystem.primaryOrange : Color.clear, lineWidth: isSelected ? 1.5 : 0)
+                RoundedRectangle(cornerRadius: 9.4)
+                    .stroke(isSelected ? DesignSystem.primaryOrange : Color.clear, lineWidth: isSelected ? 1.2 : 0)
             )
 
             // 当前标记（小点）
             if isCurrent && !isSelected {
                 Circle()
                     .fill(DesignSystem.primaryOrange)
-                    .frame(width: 5, height: 5)
+                    .frame(width: 4, height: 4)
             } else {
-                Color.clear.frame(width: 5, height: 5)
+                Color.clear.frame(width: 4, height: 4)
             }
         }
         .onTapGesture {
