@@ -70,13 +70,41 @@ final class ResultViewModel {
             monthZhi: bazi.month.zhi,
             qiYunAge: qiYunAge
         )
+
+        syncPanSummaryToAssistant()
+    }
+
+    /// 供 AI 助手注入：含完整大运与流年表；当前公历年以请求时 `dialogueClockContext` 为准。
+    private func generateAssistantPanSummary() -> String {
+        MingPanSummaryBuilder.assistantPanSummary(bazi: bazi, birth: birth, gender: gender)
+    }
+
+    /// 排盘完成即写入助手：使用紧凑命盘，避免上下文被截断。
+    private func syncPanSummaryToAssistant() {
+        persistAssistantPanSummaryToStorage()
+        NotificationCenter.default.post(name: BaziAssistantContext.panContextDidUpdateNotification, object: nil)
+    }
+
+    private func persistAssistantPanSummaryToStorage() {
+        let summary = generateAssistantPanSummary()
+        UserDefaults.standard.set(summary, forKey: BaziAssistantContext.userDefaultsKey)
+        UserDefaults.standard.set(bazi.day.gan, forKey: BaziAssistantContext.lastRiGanKey)
+        let pack = AssistantKnowledgePack.fromSummary(
+            summary: summary,
+            riGan: bazi.day.gan,
+            source: "latest_result",
+            sourceRecordId: nil
+        )
+        if let data = try? JSONEncoder().encode(pack) {
+            UserDefaults.standard.set(data, forKey: BaziAssistantContext.knowledgePackKey)
+        }
     }
 
     // MARK: - Computed Properties
 
     /// 当前年龄（虚岁近似：周岁 + 1）
     var currentAge: Int {
-        let currentYear = Calendar.current.component(.year, from: Date())
+        let currentYear = gregorianLocalCalendar().component(.year, from: Date())
         return currentYear - birth.year + 1
     }
 
@@ -113,6 +141,8 @@ final class ResultViewModel {
     func copyFullBaziInfo() {
         let info = generateFullBaziInfo()
         UIPasteboard.general.string = info
+        persistAssistantPanSummaryToStorage()
+        NotificationCenter.default.post(name: BaziAssistantContext.panContextDidUpdateNotification, object: nil)
         showCopiedToast(message: "已复制到剪贴板")
     }
 
@@ -121,6 +151,8 @@ final class ResultViewModel {
         let prompt = "请根据以下八字命盘进行解读：\n\n"
         let info = prompt + generateFullBaziInfo()
         UIPasteboard.general.string = info
+        persistAssistantPanSummaryToStorage()
+        NotificationCenter.default.post(name: BaziAssistantContext.panContextDidUpdateNotification, object: nil)
         showCopiedToast(message: "已复制，可粘贴到 AI 进行解读")
     }
 
@@ -134,28 +166,13 @@ final class ResultViewModel {
         }
     }
 
-    /// 生成全盘信息文本（含大运与流年）
+    /// 生成全盘信息文本：与注入「AI 助手」的命盘摘要**同源**（含四柱十神、能量、调候、大运流年表、流月表与流日说明、喜忌），便于粘贴到外站后与站内结论一致。
     private func generateFullBaziInfo() -> String {
-        var info = "【八字命盘】\n"
-        info += "\(birth.year)年\(birth.month)月\(birth.day)日 \(birth.hour)时\(birth.minute)分 \(gender)\n\n"
-        info += "四柱：\(bazi.year.gan)\(bazi.year.zhi) \(bazi.month.gan)\(bazi.month.zhi) \(bazi.day.gan)\(bazi.day.zhi) \(bazi.hour.gan)\(bazi.hour.zhi)\n"
-        info += "日主：\(bazi.day.gan)\n"
-        info += "起运：\(qiYunAge) 岁\n"
-        info += "大运：\(daYunList.map { "\($0.gan)\($0.zhi)" }.joined(separator: " "))\n\n"
-        info += "【流年】每步大运十年，下列为各年公历年份及流年干支：\n"
-        for (index, daYun) in daYunList.enumerated() {
-            let years = yearsForDaYunStep(index)
-            let ageStart = daYun.age
-            let ageEnd = daYun.age + 9
-            let liuNianStr = years.map { y in
-                let ln = getLiuNianGanZhi(year: y)
-                return "\(y)\(ln.gan)\(ln.zhi)"
-            }.joined(separator: " ")
-            info += "  \(daYun.gan)\(daYun.zhi)（\(ageStart)-\(ageEnd)岁）：\(liuNianStr)\n"
-        }
-        info += "\n喜神：\(xiYongShenResult.xi.joined(separator: "、"))\n"
-        info += "忌神：\(xiYongShenResult.ji.joined(separator: "、"))\n"
-        return info
+        """
+        【八字命盘】
+
+        \(MingPanSummaryBuilder.assistantPanSummary(bazi: bazi, birth: birth, gender: gender))
+        """
     }
 
     /// 获取天干十神

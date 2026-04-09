@@ -1,6 +1,15 @@
 import Foundation
 import os.log
 
+// MARK: - 公历日历
+
+/// 格里历 + 设备本地时区。解析公历「年、月、日」须用此日历，避免用户系统「日历」设为农历等时 `Calendar.current` 与公历不一致（会导致助手「今年」、流月流日错误）。
+func gregorianLocalCalendar() -> Calendar {
+    var c = Calendar(identifier: .gregorian)
+    c.timeZone = TimeZone.current
+    return c
+}
+
 // MARK: - 节气数据
 
 /// 节气数据支持的年份范围
@@ -550,4 +559,148 @@ func getLiuNianGanZhi(year: Int) -> (gan: String, zhi: String) {
     let g = (year - 1984) % 10
     let z = (year - 1984) % 12
     return (BaziConstants.tianGan[(g + 10) % 10], BaziConstants.diZhi[(z + 12) % 12])
+}
+
+// MARK: - 流月、流日（节气为月界，与四柱月柱 / 日柱算法一致）
+
+/// 流月序：正月寅 … 腊月丑（共 12）
+enum LiuYueIndex: Int, CaseIterable {
+    case zhengYin = 0   // 立春起
+    case erMao          // 惊蛰
+    case sanChen        // 清明
+    case siSi           // 立夏
+    case wuWu           // 芒种
+    case weiWei         // 小暑
+    case shenShen       // 立秋
+    case youYou         // 白露
+    case xuXu           // 寒露
+    case haiHai         // 立冬
+    case ziZi           // 大雪
+    case chouChou       // 次年小寒起
+
+    /// UI 用：正月、二月 … 腊月
+    var monthLabel: String {
+        switch self {
+        case .zhengYin: return "正月"
+        case .erMao: return "二月"
+        case .sanChen: return "三月"
+        case .siSi: return "四月"
+        case .wuWu: return "五月"
+        case .weiWei: return "六月"
+        case .shenShen: return "七月"
+        case .youYou: return "八月"
+        case .xuXu: return "九月"
+        case .haiHai: return "十月"
+        case .ziZi: return "冬月"
+        case .chouChou: return "腊月"
+        }
+    }
+}
+
+/// 指定公历「流年」年、流月序号，返回该流月起始「节」的公历年月日（与 `getJieqiDates` 一致）
+func liuYueSegmentStartYMD(solarYear: Int, liuYueIndex: Int) -> (year: Int, month: Int, day: Int) {
+    let j = getJieqiDates(year: solarYear)
+    switch liuYueIndex {
+    case 0: return (solarYear, j[1].month, j[1].day)   // 立春
+    case 1: return (solarYear, j[2].month, j[2].day)   // 惊蛰
+    case 2: return (solarYear, j[3].month, j[3].day)   // 清明
+    case 3: return (solarYear, j[4].month, j[4].day)   // 立夏
+    case 4: return (solarYear, j[5].month, j[5].day)   // 芒种
+    case 5: return (solarYear, j[6].month, j[6].day)   // 小暑
+    case 6: return (solarYear, j[7].month, j[7].day)   // 立秋
+    case 7: return (solarYear, j[8].month, j[8].day)   // 白露
+    case 8: return (solarYear, j[9].month, j[9].day)   // 寒露
+    case 9: return (solarYear, j[10].month, j[10].day) // 立冬
+    case 10: return (solarYear, j[11].month, j[11].day) // 大雪
+    case 11:
+        let jNext = getJieqiDates(year: solarYear + 1)
+        return (solarYear + 1, jNext[0].month, jNext[0].day) // 小寒（多在下一年 1 月）
+    default:
+        return (solarYear, j[1].month, j[1].day)
+    }
+}
+
+/// 流月区间 **结束**（不包含）：即下一「节」的当日（与 `liuYueSegmentStartYMD` 的下一柱起点一致）
+func liuYueSegmentEndExclusiveYMD(solarYear: Int, liuYueIndex: Int) -> (year: Int, month: Int, day: Int) {
+    if liuYueIndex < 11 {
+        return liuYueSegmentStartYMD(solarYear: solarYear, liuYueIndex: liuYueIndex + 1)
+    }
+    let j = getJieqiDates(year: solarYear + 1)
+    return (solarYear + 1, j[1].month, j[1].day) // 立春
+}
+
+/// 流月干支：取该流月起节当日排月柱（与命盘月柱规则一致）
+func getLiuYueGanZhi(solarYear: Int, liuYueIndex: Int) -> (gan: String, zhi: String) {
+    let start = liuYueSegmentStartYMD(solarYear: solarYear, liuYueIndex: liuYueIndex)
+    let yp = PillarCalculator.getYearPillar(year: start.year, month: start.month, day: start.day)
+    let p = PillarCalculator.getMonthPillar(year: start.year, month: start.month, day: start.day, yearGan: yp.yearGan)
+    return (p.gan, p.zhi)
+}
+
+/// 指定流月内的每一个公历日（起：流月起节当日，止：下一节前一日）
+func solarDaysInLiuYueSegment(solarYear: Int, liuYueIndex: Int) -> [(year: Int, month: Int, day: Int)] {
+    let cal = gregorianLocalCalendar()
+    let s = liuYueSegmentStartYMD(solarYear: solarYear, liuYueIndex: liuYueIndex)
+    let e = liuYueSegmentEndExclusiveYMD(solarYear: solarYear, liuYueIndex: liuYueIndex)
+    guard let startDate = cal.date(from: DateComponents(year: s.year, month: s.month, day: s.day)),
+          let endDate = cal.date(from: DateComponents(year: e.year, month: e.month, day: e.day)) else {
+        BaziLogger.shared.warning("流月公历日枚举失败: 流年\(solarYear) 流月序\(liuYueIndex)")
+        return []
+    }
+    var out: [(Int, Int, Int)] = []
+    var d = startDate
+    while d < endDate {
+        let c = cal.dateComponents([.year, .month, .day], from: d)
+        if let y = c.year, let m = c.month, let day = c.day {
+            out.append((y, m, day))
+        }
+        guard let next = cal.date(byAdding: .day, value: 1, to: d) else { break }
+        d = next
+    }
+    return out
+}
+
+/// 若 `reference` 落在某一流月节段内则返回其序号，否则返回 0（正月）
+func liuYueIndexContaining(solarYear: Int, reference: Date = Date()) -> Int {
+    let cal = gregorianLocalCalendar()
+    let y = cal.component(.year, from: reference)
+    let m = cal.component(.month, from: reference)
+    let d = cal.component(.day, from: reference)
+    if y != solarYear { return 0 }
+    for i in 0..<12 {
+        let s = liuYueSegmentStartYMD(solarYear: solarYear, liuYueIndex: i)
+        let e = liuYueSegmentEndExclusiveYMD(solarYear: solarYear, liuYueIndex: i)
+        if compareYMD((y, m, d), (s.year, s.month, s.day)) >= 0,
+           compareYMD((y, m, d), (e.year, e.month, e.day)) < 0 {
+            return i
+        }
+    }
+    return 0
+}
+
+/// 对话时刻注入用：当前公历年下的流月（节气月）与当日流日干支
+func liuYueLiuRiForDialogueClock(reference: Date = Date()) -> (
+    solarYear: Int,
+    liuYueMonthLabel: String,
+    liuYueGan: String,
+    liuYueZhi: String,
+    liuRiGan: String,
+    liuRiZhi: String
+) {
+    let cal = gregorianLocalCalendar()
+    let y = cal.component(.year, from: reference)
+    let m = cal.component(.month, from: reference)
+    let d = cal.component(.day, from: reference)
+    let idx = liuYueIndexContaining(solarYear: y, reference: reference)
+    let ly = getLiuYueGanZhi(solarYear: y, liuYueIndex: idx)
+    let label = LiuYueIndex(rawValue: idx)?.monthLabel ?? "正月"
+    let dayP = PillarCalculator.getDayPillar(year: y, month: m, day: d)
+    return (y, label, ly.gan, ly.zhi, dayP.gan, dayP.zhi)
+}
+
+private func compareYMD(_ a: (Int, Int, Int), _ b: (Int, Int, Int)) -> Int {
+    if a.0 != b.0 { return a.0 < b.0 ? -1 : 1 }
+    if a.1 != b.1 { return a.1 < b.1 ? -1 : 1 }
+    if a.2 != b.2 { return a.2 < b.2 ? -1 : (a.2 > b.2 ? 1 : 0) }
+    return 0
 }

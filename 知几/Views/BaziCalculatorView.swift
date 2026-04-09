@@ -17,12 +17,14 @@ private enum PickerData {
 // MARK: - 主视图
 
 struct BaziCalculatorView: View {
-    @State private var selectedYear = 1992
-    @State private var selectedMonth = 8
-    @State private var selectedDay = 28
-    @State private var selectedHour = 10
-    @State private var selectedMinute = 0
-    @State private var gender = "male"
+    var mingPanStore: MingPanStore
+
+    @State private var selectedYear = 1995
+    @State private var selectedMonth = 10
+    @State private var selectedDay = 5
+    @State private var selectedHour = 2
+    @State private var selectedMinute = 10
+    @State private var gender = "female"
     @State private var showResult = false
     @State private var bazi: Bazi?
     @State private var resultViewId = UUID()  // 用于强制 ResultView 重建
@@ -49,7 +51,12 @@ struct BaziCalculatorView: View {
 
             if showResult, let bazi = bazi {
                 // 结果页面：不包在 ScrollView 里，让 ResultView 自己管理滚动
-                ResultView(bazi: bazi, birth: getBirthComponents(), gender: gender, onBack: {
+                ResultView(
+                    bazi: bazi,
+                    birth: getBirthComponents(),
+                    gender: gender,
+                    mingPanStore: mingPanStore,
+                    onBack: {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         showResult = false
                     }

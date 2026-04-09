@@ -7,12 +7,20 @@ struct ResultView: View {
 
     @State private var viewModel: ResultViewModel
 
+    let mingPanStore: MingPanStore
     let onBack: () -> Void
 
     // MARK: - Initialization
 
-    init(bazi: Bazi, birth: (year: Int, month: Int, day: Int, hour: Int, minute: Int), gender: String, onBack: @escaping () -> Void) {
+    init(
+        bazi: Bazi,
+        birth: (year: Int, month: Int, day: Int, hour: Int, minute: Int),
+        gender: String,
+        mingPanStore: MingPanStore,
+        onBack: @escaping () -> Void
+    ) {
         self._viewModel = State(initialValue: ResultViewModel(bazi: bazi, birth: birth, gender: gender))
+        self.mingPanStore = mingPanStore
         self.onBack = onBack
     }
 
@@ -52,6 +60,6 @@ struct ResultView: View {
     // MARK: - 内容视图
 
     private var contentView: some View {
-        MingPanView(viewModel: viewModel, onBack: onBack)
+        MingPanView(viewModel: viewModel, mingPanStore: mingPanStore, onBack: onBack)
     }
 }

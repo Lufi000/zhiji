@@ -650,3 +650,49 @@ struct BaziErrorTests {
         }
     }
 }
+
+// MARK: - 流月流日
+
+struct LiuYueLiuRiTests {
+
+    @Test("流月正月与节当日月柱一致")
+    func testLiuYueMatchesMonthPillar() {
+        let y = 2026
+        let ly = getLiuYueGanZhi(solarYear: y, liuYueIndex: 0)
+        let start = liuYueSegmentStartYMD(solarYear: y, liuYueIndex: 0)
+        let lunar = PillarCalculator.getYearPillar(year: start.year, month: start.month, day: start.day)
+        let mp = PillarCalculator.getMonthPillar(year: start.year, month: start.month, day: start.day, yearGan: lunar.yearGan)
+        #expect(ly.gan == mp.gan)
+        #expect(ly.zhi == mp.zhi)
+        #expect(ly.zhi == "寅")
+    }
+
+    @Test("流月卯月段内日数合理")
+    func testLiuYueSegmentDayCount() {
+        let days = solarDaysInLiuYueSegment(solarYear: 2026, liuYueIndex: 1)
+        #expect(days.count >= 28)
+        #expect(days.count <= 33)
+    }
+
+    @Test("助手摘要含流月与流日段落")
+    func testAssistantSummaryIncludesLiuYueLiuRi() {
+        let bazi = Bazi(
+            year: Pillar(gan: "甲", zhi: "子"),
+            month: Pillar(gan: "丙", zhi: "寅"),
+            day: Pillar(gan: "戊", zhi: "午"),
+            hour: Pillar(gan: "戊", zhi: "午"),
+            shengXiao: "马"
+        )
+        let text = MingPanSummaryBuilder.assistantPanSummary(
+            bazi: bazi,
+            birth: (1990, 5, 15, 10, 30),
+            gender: "male"
+        )
+        #expect(text.contains("【流月】"))
+        #expect(text.contains("【流日】"))
+        #expect(text.contains("摘要生成时刻参考"))
+        #expect(text.contains("【大运与流年】"))
+        #expect(text.contains("干→"))
+        #expect(text.contains("支本气→"))
+    }
+}

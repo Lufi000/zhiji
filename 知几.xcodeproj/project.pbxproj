@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9CAEC0BE2F7AB5F000F0AC70 /* MiniMaxChatKit in Frameworks */ = {isa = PBXBuildFile; productRef = 9CCBF3A12F1DF59800365CC1 /* MiniMaxChatKit */; };
 		9CC863C82F21CB260074B872 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9CC863C72F21CB260074B872 /* StoreKit.framework */; };
 /* End PBXBuildFile section */
 
@@ -57,6 +58,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9CAEC0BE2F7AB5F000F0AC70 /* MiniMaxChatKit in Frameworks */,
 				9CC863C82F21CB260074B872 /* StoreKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -127,6 +129,7 @@
 			);
 			name = "知几";
 			packageProductDependencies = (
+				9CCBF3A12F1DF59800365CC1 /* MiniMaxChatKit */,
 			);
 			productName = "知几";
 			productReference = 9CCBF3532F1DF59800365CC1 /* 知几.app */;
@@ -210,6 +213,9 @@
 			);
 			mainGroup = 9CCBF34A2F1DF59800365CC1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9CCBF3A02F1DF59800365CC1 /* XCLocalSwiftPackageReference "Packages/MiniMaxChatKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9CCBF3542F1DF59800365CC1 /* Products */;
 			projectDirPath = "";
@@ -593,6 +599,21 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		9CCBF3A02F1DF59800365CC1 /* XCLocalSwiftPackageReference "Packages/MiniMaxChatKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/MiniMaxChatKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9CCBF3A12F1DF59800365CC1 /* MiniMaxChatKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9CCBF3A02F1DF59800365CC1 /* XCLocalSwiftPackageReference "Packages/MiniMaxChatKit" */;
+			productName = MiniMaxChatKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9CCBF34B2F1DF59800365CC1 /* Project object */;
 }
